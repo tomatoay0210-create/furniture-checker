@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>家具配置チェッカー</title>
+<style>
+:root{
+  --red:#d32f2f; --yel:#e69500; --blue:#1565c0; --ok:#2e7d32;
+  --bg:#f4f5f7; --line:#d5d8dd; --text:#222; --sub:#5f6368;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font:16px/1.5 system-ui,-apple-system,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
+  color:var(--text);background:var(--bg);color-scheme:light;
+  overscroll-behavior:none;-webkit-text-size-adjust:100%;
+}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+
+/* 上部バー */
+#top{flex:none;height:48px;display:flex;align-items:center;gap:8px;padding:0 8px;background:#fff;border-bottom:1px solid var(--line)}
+#btnRoom{flex:1;min-width:0;height:44px;border:0;background:none;text-align:left;font-weight:700;padding:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#badge{height:44px;min-width:64px;padding:0 12px;border:0;border-radius:22px;color:#fff;font-weight:700;background:var(--ok)}
+#badge.red{background:var(--red)} #badge.yel{background:var(--yel)}
+#btnMenu{width:44px;height:44px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:20px;line-height:1}
+
+#notice{flex:none;display:none;align-items:center;gap:8px;padding:6px 8px;background:#fff7e0;border-bottom:1px solid #f0d58a;font-size:14px}
+#notice.show{display:flex}
+#notice span{flex:1}
+
+/* 配置図 */
+#main{flex:1;min-height:0;display:flex;flex-direction:column}
+#stageWrap{position:relative;flex:1;min-height:0;background:#e9ebee;overflow:hidden}
+#stage{display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#stage *{pointer-events:none}
+#stage .furn,#stage .furn *{pointer-events:auto}
+#app.edit #stage .furn{cursor:move}
+.pulse{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
+#fab{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.fabbtn{min-width:44px;height:44px;padding:0 12px;border:1px solid #b7bcc4;border-radius:22px;background:rgba(255,255,255,.95);box-shadow:0 1px 4px rgba(0,0,0,.2);font-weight:700}
+.fabrow{display:flex;gap:8px}
+.fabbtn[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:#fff}
+#rulerHint{position:absolute;left:8px;bottom:8px;max-width:calc(100% - 150px);padding:6px 10px;border-radius:8px;background:rgba(21,101,192,.92);color:#fff;font-size:14px;pointer-events:none}
+
+/* パネル(スマホ=ボトムシート / PC=サイドパネル) */
+#panel{flex:none;display:none;flex-direction:column;background:#fff;border-top:1px solid var(--line);max-height:40vh;max-height:40dvh;min-height:0}
+#app.sheet #panel{display:flex}
+#app.sheet.tall #panel{max-height:70vh;max-height:70dvh}
+#tabs{flex:none;display:flex;border-bottom:1px solid var(--line)}
+#tabs button{flex:1;min-height:44px;border:0;background:none;font-size:15px;border-bottom:3px solid transparent;padding:0 2px}
+#tabs button.on{border-bottom-color:var(--blue);color:var(--blue);font-weight:700}
+#tabs #closeSheet{flex:none;width:44px;font-size:18px}
+#panelBody{flex:1;min-height:0;overflow:auto;padding:12px;-webkit-overflow-scrolling:touch}
+
+/* 下部バー */
+#bottom{flex:none;display:flex;gap:8px;align-items:center;height:calc(64px + env(safe-area-inset-bottom));padding:0 8px env(safe-area-inset-bottom);background:#fff;border-top:1px solid var(--line)}
+#bottom .btn{flex:1;height:48px}
+
+.btn{min-height:44px;min-width:44px;padding:0 12px;border:1px solid #b7bcc4;border-radius:8px;background:#fff;font-weight:600}
+.btn:active{background:#eef1f5}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.danger{color:var(--red);border-color:#e3a3a3}
+.btn[disabled]{opacity:.4;cursor:default}
+
+/* フォーム */
+.stack>*+*{margin-top:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.fld{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fld>span{font-size:14px;color:var(--sub)}
+.fld input,.fld select{width:100%;height:44px;padding:0 10px;border:1px solid #b7bcc4;border-radius:8px;background:#fff;font-size:16px}
+.fld input[type=color]{padding:2px 4px}
+.full{grid-column:1/-1}
+h3{margin:16px 0 8px;font-size:16px}
+h3:first-child{margin-top:0}
+.card{border:1px solid var(--line);border-radius:8px;padding:8px;background:#fafbfc}
+.card+.card{margin-top:8px}
+.cardhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-weight:700}
+.pads{display:flex;gap:8px;flex-wrap:wrap}
+.pad{display:grid;grid-template-columns:repeat(3,44px);grid-auto-rows:44px;gap:8px}
+.pad .btn{padding:0;font-size:15px}
+.padwrap small{display:block;color:var(--sub);font-size:14px;margin-bottom:2px}
+.note{font-size:14px;color:var(--sub)}
+.list button.item{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;text-align:left}
+.list button.item+button.item{margin-top:8px}
+.chip{flex:none;width:16px;height:16px;border-radius:4px;border:1px solid #888}
+.ico{flex:none;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:700;font-size:14px;text-align:center;line-height:22px}
+.ico.red{background:var(--red)}
+.ico.yel{background:var(--yel);border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);line-height:28px}
+.witem.red{border-left:6px solid var(--red)!important}
+.witem.yel{border-left:6px solid var(--yel)!important}
+.good{color:var(--ok);font-weight:700}
+.warnbox{margin-top:8px;padding:8px;border-radius:8px;background:#fff7e0;border:1px solid #f0d58a;font-size:14px}
+.urlbox{width:100%;height:44px;padding:0 8px;font-size:16px;border:1px solid #b7bcc4;border-radius:8px}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+
+#toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:90%;padding:10px 16px;border-radius:8px;background:rgba(32,33,36,.92);color:#fff;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10}
+#toast.show{opacity:1}
+
+@media (min-width:768px){
+  #main{flex-direction:row}
+  #panel{display:flex;width:360px;max-height:none!important;border-top:0;border-left:1px solid var(--line)}
+  #closeSheet{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app" class="edit">
+  <header id="top">
+    <button id="btnRoom" data-act="openRoom" aria-label="部屋の設定"></button>
+    <button id="badge" data-act="openWarn" aria-label="警告一覧"></button>
+    <button id="btnMenu" data-act="openMenu" aria-label="メニュー">☰</button>
+  </header>
+  <div id="notice"><span></span><button class="btn" data-act="startEdit">編集する</button></div>
+  <div id="main">
+    <div id="stageWrap">
+      <svg id="stage" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="部屋の配置図"></svg>
+      <div id="rulerHint" hidden>家具をタップすると、壁・他の家具・柱までの距離を表示します</div>
+      <div id="fab">
+        <div class="fabrow">
+          <button class="fabbtn" data-act="zoomOut" aria-label="縮小">−</button>
+          <button class="fabbtn" data-act="zoomIn" aria-label="拡大">＋</button>
+        </div>
+        <button class="fabbtn" id="btnRuler" data-act="ruler" aria-pressed="false">📏 物差し</button>
+        <button class="fabbtn" data-act="fit">全体表示</button>
+      </div>
+    </div>
+    <aside id="panel" aria-label="編集パネル">
+      <div id="tabs"></div>
+      <div id="panelBody"></div>
+    </aside>
+  </div>
+  <footer id="bottom">
+    <button class="btn" id="btnAdd" data-act="addFurn">＋ 家具追加</button>
+    <button class="btn" id="btnMode" data-act="toggleMode"></button>
+    <button class="btn" data-act="openShare">共有</button>
+  </footer>
+</div>
+<div id="toast" role="status"></div>
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+ * 定数・ユーティリティ
+ * ===================================================================== */
+const STORAGE_KEY = 'furniture-checker.v1';
+const DEFAULT_SETTINGS = { aisleMin: 60, aisleTight: 45, snap: 5, gapIgnore: 10 };
+const EPS = 1e-6;
+const MIN_FACE = 20;      // 通路判定: 向かい合う辺がこの長さ以上重なっているときだけ「通路」とみなす
+const WINDOW_ZONE = 30;   // 窓の前の判定範囲(奥行き)
+const WALL_T = 10;        // 描画上の壁の厚み
+const RED = '#d32f2f', YEL = '#e69500', BLUE = '#1565c0';
+const WALLS = ['top', 'right', 'bottom', 'left'];
+const WALL_LABEL = { top: '上', right: '右', bottom: '下', left: '左' };
+
+const LIM = {
+  'room.width': [50, 3000], 'room.depth': [50, 3000],
+  'doors.width': [10, 500], 'windows.width': [10, 1000],
+  w: [1, 3000], d: [1, 3000], h: [0, 500], front: [0, 300],
+  x: [-1000, 5000], y: [-1000, 5000], offset: [0, 5000], sill: [0, 300],
+  aisleMin: [1, 300], aisleTight: [0, 300], snap: [1, 50], gapIgnore: [0, 50],
+};
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const fmt = (v) => String(Math.round(v * 10) / 10);
+const num = (v, def, min = -Infinity, max = Infinity) => {
+  v = Number(v);
+  return Number.isFinite(v) ? clamp(v, min, max) : def;
+};
+const str = (v, def) => (typeof v === 'string' && v.trim() !== '' ? v : def);
+
+function box(x, y, w, d) { return { x, y, w, d, x0: x, y0: y, x1: x + w, y1: y + d }; }
+function inter(a, b) {
+  const x0 = Math.max(a.x0, b.x0), y0 = Math.max(a.y0, b.y0);
+  const x1 = Math.min(a.x1, b.x1), y1 = Math.min(a.y1, b.y1);
+  return x1 - x0 > EPS && y1 - y0 > EPS ? box(x0, y0, x1 - x0, y1 - y0) : null;
+}
+const textW = (s, px) => [...s].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? px : px * 0.58), 0);
+function fitText(s, maxW, px) {
+  if (textW(s, px) <= maxW) return s;
+  let t = [...s];
+  while (t.length > 1) {
+    t.pop();
+    if (textW(t.join('') + '…', px) <= maxW) return t.join('') + '…';
+  }
+  return '';
+}
+
+/* =====================================================================
+ * データモデル
+ * ===================================================================== */
+function sampleData() {
+  return {
+    version: 1,
+    settings: { ...DEFAULT_SETTINGS },
+    rooms: [{
+      id: 'r1', name: '洋室', width: 360, depth: 270,
+      fixtures: [{ id: 'f1', name: '柱', x: 0, y: 0, w: 30, d: 30 }],
+      doors: [{ id: 'd1', wall: 'bottom', offset: 20, width: 80, type: 'swing', hinge: 'left', opens: 'in' }],
+      windows: [{ id: 'w1', wall: 'top', offset: 100, width: 160, sill: 90 }],
+      furniture: [
+        { id: 'k1', name: 'ベッド', x: 0, y: 60, w: 100, d: 200, h: 40, rot: 0, front: 0, color: '#8fb3d9' },
+        { id: 'k2', name: '机', x: 200, y: 0, w: 120, d: 60, h: 72, rot: 0, front: 60, color: '#e0c28f' },
+      ],
+    }],
+  };
+}
+function emptyData(settings) {
+  return {
+    version: 1, settings: { ...(settings || DEFAULT_SETTINGS) },
+    rooms: [{ id: 'r1', name: '新しい部屋', width: 360, depth: 270, fixtures: [], doors: [], windows: [], furniture: [] }],
+  };
+}
+
+function uniqIds(arr, prefix) {
+  const used = new Set();
+  let n = 1;
+  for (const o of arr) {
+    if (!o.id || used.has(o.id)) {
+      while (used.has(prefix + n)) n++;
+      o.id = prefix + n;
+    }
+    used.add(o.id);
+  }
+}
+
+/** 外部から来たデータ(JSON・URL・localStorage)を検証して正規化する。不正なら例外 */
+function normalize(d) {
+  if (!d || typeof d !== 'object' || !Array.isArray(d.rooms) || d.rooms.length === 0) {
+    throw new Error('部屋のデータが見つかりません');
+  }
+  const s = d.settings || {};
+  const settings = {
+    aisleMin: num(s.aisleMin, DEFAULT_SETTINGS.aisleMin, ...LIM.aisleMin),
+    aisleTight: num(s.aisleTight, DEFAULT_SETTINGS.aisleTight, ...LIM.aisleTight),
+    snap: num(s.snap, DEFAULT_SETTINGS.snap, ...LIM.snap),
+    gapIgnore: num(s.gapIgnore, DEFAULT_SETTINGS.gapIgnore, ...LIM.gapIgnore),
+  };
+  const oneOf = (v, list, def) => (list.includes(v) ? v : def);
+  const rooms = d.rooms.map((r, i) => {
+    r = r || {};
+    const room = {
+      id: str(r.id, 'r' + (i + 1)), name: str(r.name, '部屋'),
+      width: num(r.width, 360, ...LIM['room.width']), depth: num(r.depth, 270, ...LIM['room.depth']),
+      fixtures: (Array.isArray(r.fixtures) ? r.fixtures : []).map((o) => ({
+        id: str(o && o.id, ''), name: str(o && o.name, '固定物'),
+        x: num(o && o.x, 0, ...LIM.x), y: num(o && o.y, 0, ...LIM.y), w: num(o && o.w, 30, ...LIM.w), d: num(o && o.d, 30, ...LIM.d),
+      })),
+      doors: (Array.isArray(r.doors) ? r.doors : []).map((o) => ({
+        id: str(o && o.id, ''), wall: oneOf(o && o.wall, WALLS, 'bottom'),
+        offset: num(o && o.offset, 0, ...LIM.offset), width: num(o && o.width, 80, ...LIM['doors.width']),
+        type: oneOf(o && o.type, ['swing', 'sliding'], 'swing'),
+        hinge: oneOf(o && o.hinge, ['left', 'right'], 'left'), opens: oneOf(o && o.opens, ['in', 'out'], 'in'),
+      })),
+      windows: (Array.isArray(r.windows) ? r.windows : []).map((o) => ({
+        id: str(o && o.id, ''), wall: oneOf(o && o.wall, WALLS, 'top'),
+        offset: num(o && o.offset, 0, ...LIM.offset), width: num(o && o.width, 100, ...LIM['windows.width']),
+        sill: num(o && o.sill, 90, ...LIM.sill),
+      })),
+      furniture: (Array.isArray(r.furniture) ? r.furniture : []).map((o) => ({
+        id: str(o && o.id, ''), name: str(o && o.name, '家具'),
+        x: num(o && o.x, 0, ...LIM.x), y: num(o && o.y, 0, ...LIM.y),
+        w: num(o && o.w, 60, ...LIM.w), d: num(o && o.d, 60, ...LIM.d), h: num(o && o.h, 60, ...LIM.h),
+        rot: [0, 90, 180, 270].includes(Number(o && o.rot)) ? Number(o.rot) : 0,
+        front: num(o && o.front, 0, ...LIM.front),
+        color: /^#[0-9a-fA-F]{6}$/.test(o && o.color) ? o.color : '#8fb3d9',
+      })),
+    };
+    uniqIds(room.fixtures, 'f'); uniqIds(room.doors, 'd'); uniqIds(room.windows, 'w'); uniqIds(room.furniture, 'k');
+    return room;
+  });
+  return { version: 1, settings, rooms };
+}
+
+/* =====================================================================
+ * 状態
+ * ===================================================================== */
+const state = {
+  data: null, mode: 'edit', locked: false,
+  selId: null, tab: 'furn', sheet: false,
+  warns: [], levels: {}, focusKey: null,
+  dragging: false, fitMode: true, ruler: false,
+};
+const view = { s: 1, tx: 0, ty: 0, w: 0, h: 0 };
+const room = () => state.data.rooms[0];
+const findF = (id) => room().furniture.find((f) => f.id === id);
+const selFurn = () => (state.selId ? findF(state.selId) : null);
+
+const app = $('#app'), stage = $('#stage'), panelBody = $('#panelBody'), tabsEl = $('#tabs');
+
+/* =====================================================================
+ * 幾何
+ * ===================================================================== */
+function fRect(f) {
+  const sw = f.rot === 90 || f.rot === 270;
+  return box(f.x, f.y, sw ? f.d : f.w, sw ? f.w : f.d);
+}
+/** 前方スペースの長方形。rot=0 で下向き、90 で左、180 で上、270 で右(時計回りに回る) */
+function frontRect(f) {
+  if (!(f.front > 0)) return null;
+  const r = fRect(f), t = f.front;
+  switch (f.rot) {
+    case 90: return box(r.x0 - t, r.y0, t, r.d);
+    case 180: return box(r.x0, r.y0 - t, r.w, t);
+    case 270: return box(r.x1, r.y0, t, r.d);
+    default: return box(r.x0, r.y1, r.w, t);
+  }
+}
+function wallLen(r, wall) { return wall === 'top' || wall === 'bottom' ? r.width : r.depth; }
+
+/** ドアの幾何。hinge:'left' は壁の始点側(左端/上端)、'right' は終点側(右端/下端) */
+function doorGeom(r, dr) {
+  const W = r.width, D = r.depth, o = dr.offset, w = dr.width;
+  let band, start, u, n;
+  switch (dr.wall) {
+    case 'top': band = box(o, -WALL_T, w, WALL_T); start = { x: o, y: 0 }; u = { x: 1, y: 0 }; n = { x: 0, y: 1 }; break;
+    case 'right': band = box(W, o, WALL_T, w); start = { x: W, y: o }; u = { x: 0, y: 1 }; n = { x: -1, y: 0 }; break;
+    case 'left': band = box(-WALL_T, o, WALL_T, w); start = { x: 0, y: o }; u = { x: 0, y: 1 }; n = { x: 1, y: 0 }; break;
+    default: band = box(o, D, w, WALL_T); start = { x: o, y: D }; u = { x: 1, y: 0 }; n = { x: 0, y: -1 };
+  }
+  const atStart = dr.hinge !== 'right';
+  const hinge = atStart ? start : { x: start.x + u.x * w, y: start.y + u.y * w };
+  const uu = atStart ? u : { x: -u.x, y: -u.y };
+  return { band, hinge, u: uu, n, r: w };
+}
+function sectorBBox(g) {
+  const P = [g.hinge, { x: g.hinge.x + g.u.x * g.r, y: g.hinge.y + g.u.y * g.r },
+    { x: g.hinge.x + g.n.x * g.r, y: g.hinge.y + g.n.y * g.r },
+    { x: g.hinge.x + (g.u.x + g.n.x) * g.r, y: g.hinge.y + (g.u.y + g.n.y) * g.r }];
+  const xs = P.map((p) => p.x), ys = P.map((p) => p.y);
+  return box(Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+}
+function sectorD(g, sign = 1) {
+  const H = g.hinge, u = g.u, n = { x: g.n.x * sign, y: g.n.y * sign }, r = g.r;
+  const P1 = { x: H.x + u.x * r, y: H.y + u.y * r }, P2 = { x: H.x + n.x * r, y: H.y + n.y * r };
+  const sweep = u.x * n.y - u.y * n.x > 0 ? 1 : 0;
+  return `M${H.x} ${H.y}L${P1.x} ${P1.y}A${r} ${r} 0 0 ${sweep} ${P2.x} ${P2.y}Z`;
+}
+/** 扇形(1/4円)と長方形が重なるか */
+function sectorHitsRect(g, rc) {
+  const H = g.hinge, loc = (x, y) => [(x - H.x) * g.u.x + (y - H.y) * g.u.y, (x - H.x) * g.n.x + (y - H.y) * g.n.y];
+  const p = loc(rc.x0, rc.y0), q = loc(rc.x1, rc.y1);
+  const a0 = Math.min(p[0], q[0]), a1 = Math.max(p[0], q[0]), b0 = Math.min(p[1], q[1]), b1 = Math.max(p[1], q[1]);
+  if (a1 <= EPS || b1 <= EPS) return false;
+  return Math.hypot(Math.max(a0, 0), Math.max(b0, 0)) < g.r - EPS;
+}
+function windowZone(r, w) {
+  switch (w.wall) {
+    case 'top': return box(w.offset, 0, w.width, WINDOW_ZONE);
+    case 'bottom': return box(w.offset, r.depth - WINDOW_ZONE, w.width, WINDOW_ZONE);
+    case 'left': return box(0, w.offset, WINDOW_ZONE, w.width);
+    default: return box(r.width - WINDOW_ZONE, w.offset, WINDOW_ZONE, w.width);
+  }
+}
+function windowBand(r, w) {
+  switch (w.wall) {
+    case 'top': return box(w.offset, -WALL_T, w.width, WALL_T);
+    case 'bottom': return box(w.offset, r.depth, w.width, WALL_T);
+    case 'left': return box(-WALL_T, w.offset, WALL_T, w.width);
+    default: return box(r.width, w.offset, WALL_T, w.width);
+  }
+}
+function wallBoxes(r) {
+  const B = 1e4;
+  return [
+    { name: '上の壁', kind: 'wall', ...box(-B, -B, 2 * B, B) },
+    { name: '下の壁', kind: 'wall', ...box(-B, r.depth, 2 * B, B) },
+    { name: '左の壁', kind: 'wall', ...box(-B, -B, B, 2 * B) },
+    { name: '右の壁', kind: 'wall', ...box(r.width, -B, B, 2 * B) },
+  ];
+}
+function obstacles(r, excludeId) {
+  const out = [];
+  for (const f of r.furniture) if (f.id !== excludeId) out.push({ id: f.id, name: f.name, kind: 'furn', ...fRect(f) });
+  for (const x of r.fixtures) out.push({ id: x.id, name: x.name, kind: 'fix', ...box(x.x, x.y, x.w, x.d) });
+  return out;
+}
+
+/* =====================================================================
+ * チェック判定
+ * ===================================================================== */
+function computeWarnings() {
+  const r = room(), S = state.data.settings, out = [];
+  const W = r.width, D = r.depth, roomBox = box(0, 0, W, D);
+  const F = r.furniture.map((f) => ({ f, r: fRect(f) }));
+  const FX = r.fixtures.map((x) => ({ x, r: box(x.x, x.y, x.w, x.d) }));
+  const swings = r.doors
+    .map((dr, i) => ({ dr, i, g: doorGeom(r, dr) }))
+    .filter((s) => s.dr.type === 'swing' && s.dr.opens === 'in');
+  const add = (w) => {
+    w.key = `${w.kind}:${w.ids.join('|')}:${Math.round(w.rect.x)},${Math.round(w.rect.y)},${Math.round(w.rect.w)}x${Math.round(w.rect.d)}`;
+    out.push(w);
+  };
+
+  // 重なり: 壁(はみ出し)
+  for (const { f, r: fr } of F) {
+    if (fr.x0 < -EPS || fr.y0 < -EPS || fr.x1 > W + EPS || fr.y1 > D + EPS) {
+      const shapes = [];
+      if (fr.x0 < 0) shapes.push(box(fr.x0, fr.y0, Math.min(0, fr.x1) - fr.x0, fr.d));
+      if (fr.x1 > W) shapes.push(box(Math.max(W, fr.x0), fr.y0, fr.x1 - Math.max(W, fr.x0), fr.d));
+      if (fr.y0 < 0) shapes.push(box(fr.x0, fr.y0, fr.w, Math.min(0, fr.y1) - fr.y0));
+      if (fr.y1 > D) shapes.push(box(fr.x0, Math.max(D, fr.y0), fr.w, fr.y1 - Math.max(D, fr.y0)));
+      add({ level: 'red', kind: 'overlap', ids: [f.id], rect: fr, shapes, text: `${f.name}が部屋からはみ出しています` });
+    }
+  }
+  // 重なり: 家具どうし
+  for (let i = 0; i < F.length; i++) {
+    for (let j = i + 1; j < F.length; j++) {
+      const c = inter(F[i].r, F[j].r);
+      if (c) add({ level: 'red', kind: 'overlap', ids: [F[i].f.id, F[j].f.id], rect: c, shapes: [c], text: `${F[i].f.name}と${F[j].f.name}が重なっています` });
+    }
+  }
+  // 重なり: 家具と固定物
+  for (const a of F) for (const b of FX) {
+    const c = inter(a.r, b.r);
+    if (c) add({ level: 'red', kind: 'overlap', ids: [a.f.id], rect: c, shapes: [c], text: `${a.f.name}が${b.x.name}と重なっています` });
+  }
+  // ドア開閉範囲
+  for (const s of swings) {
+    const bb = sectorBBox(s.g), label = `ドア${s.i + 1}(${WALL_LABEL[s.dr.wall]}の壁)`;
+    const shape = { sector: s.g };
+    for (const a of F) if (sectorHitsRect(s.g, a.r)) {
+      add({ level: 'red', kind: 'door', ids: [a.f.id], rect: bb, shapes: [shape], text: `${label}の開閉範囲に${a.f.name}がかかっています` });
+    }
+    for (const b of FX) if (sectorHitsRect(s.g, b.r)) {
+      add({ level: 'red', kind: 'door', ids: [], rect: bb, shapes: [shape], text: `${label}の開閉範囲に${b.x.name}がかかっています` });
+    }
+  }
+  // 前方スペース
+  for (const a of F) {
+    const fr = frontRect(a.f);
+    if (!fr) continue;
+    const causes = [];
+    for (const b of F) if (b.f !== a.f && inter(fr, b.r)) causes.push(b.f.name);
+    for (const b of FX) if (inter(fr, b.r)) causes.push(b.x.name);
+    for (const s of swings) if (sectorHitsRect(s.g, fr)) causes.push(`ドア${s.i + 1}の開閉範囲`);
+    if (fr.x0 < -EPS || fr.y0 < -EPS || fr.x1 > W + EPS || fr.y1 > D + EPS) causes.push('壁');
+    if (causes.length) {
+      add({ level: 'yellow', kind: 'front', ids: [a.f.id], rect: fr, shapes: [fr], text: `${a.f.name}の前方スペース(${fmt(a.f.front)}cm)が${[...new Set(causes)].join('・')}にかかっています` });
+    }
+  }
+  // 窓
+  r.windows.forEach((w, i) => {
+    const zone = windowZone(r, w);
+    for (const a of F) {
+      if (!(a.f.h > w.sill)) continue;
+      const c = inter(zone, a.r);
+      if (c) add({ level: 'yellow', kind: 'window', ids: [a.f.id], rect: c, shapes: [c], text: `${a.f.name}(高さ${fmt(a.f.h)}cm)が窓${i + 1}の前をふさいでいます(窓の下端 ${fmt(w.sill)}cm)` });
+    }
+  });
+  // 通路幅
+  aisleWarnings(r, S, out, add);
+
+  out.sort((a, b) => (a.level === b.level ? 0 : a.level === 'red' ? -1 : 1));
+  return out;
+}
+
+function aisleWarnings(r, S, out, add) {
+  const all = obstacles(r).concat(wallBoxes(r));
+  const blockers = all.filter((o) => o.kind !== 'wall');
+  for (const axis of ['x', 'y']) {
+    const [a0, a1, b0, b1] = axis === 'x' ? ['x0', 'x1', 'y0', 'y1'] : ['y0', 'y1', 'x0', 'x1'];
+    for (const A of all) for (const B of all) {
+      if (A === B || (A.kind === 'wall' && B.kind === 'wall')) continue;
+      const gap = B[a0] - A[a1];
+      if (!(gap > S.gapIgnore + EPS && gap < S.aisleMin - EPS)) continue;
+      const lo = Math.max(A[b0], B[b0]), hi = Math.min(A[b1], B[b1]);
+      if (hi - lo < MIN_FACE) continue;
+      let ivs = [[lo, hi]];
+      for (const C of blockers) {
+        if (C === A || C === B) continue;
+        if (!(C[a0] < B[a0] - EPS && C[a1] > A[a1] + EPS)) continue;
+        const nx = [];
+        for (const [i0, i1] of ivs) {
+          if (C[b1] <= i0 || C[b0] >= i1) { nx.push([i0, i1]); continue; }
+          if (C[b0] > i0) nx.push([i0, C[b0]]);
+          if (C[b1] < i1) nx.push([C[b1], i1]);
+        }
+        ivs = nx;
+      }
+      for (const [i0, i1] of ivs) {
+        if (i1 - i0 < MIN_FACE) continue;
+        const rc = axis === 'x' ? box(A.x1, i0, gap, i1 - i0) : box(i0, A.y1, i1 - i0, gap);
+        const red = gap < S.aisleTight - EPS;
+        const ids = [A, B].filter((o) => o.kind === 'furn').map((o) => o.id);
+        add({
+          level: red ? 'red' : 'yellow', kind: 'aisle', ids, rect: rc, shapes: [rc],
+          label: `${fmt(gap)}`,
+          text: `${A.name}と${B.name}のすき間 ${fmt(gap)}cm${red ? '(通れません)' : '(横向きでやっと)'}`,
+        });
+      }
+    }
+  }
+}
+
+function recompute() {
+  state.warns = computeWarnings();
+  const lv = {};
+  for (const w of state.warns) for (const id of w.ids) {
+    if (w.level === 'red') lv[id] = 'red';
+    else if (!lv[id]) lv[id] = 'yellow';
+  }
+  state.levels = lv;
+}
+
+/* =====================================================================
+ * 描画(SVG)
+ * ===================================================================== */
+let renderQueued = false;
+function requestRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => { renderQueued = false; draw(); });
+}
+
+function T(x, y, s, o = {}) {
+  const px = o.px || 12, inv = 1 / view.s;
+  const col = o.fill || '#222';
+  const halo = o.halo === false ? '' : 'paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;';
+  return `<g transform="translate(${x} ${y}) scale(${inv})"><text x="${o.dx || 0}" y="${o.dy || 0}" dy=".35em" text-anchor="${o.anchor || 'middle'}" font-size="${px}" font-weight="${o.bold ? 700 : 400}" fill="${col}" style="${halo}">${esc(s)}</text></g>`;
+}
+function pill(x, y, s, col) {
+  const w = textW(s, 11) + 12;
+  return `<g transform="translate(${x} ${y}) scale(${1 / view.s})"><rect x="${-w / 2}" y="-9" width="${w}" height="18" rx="9" fill="${col}" stroke="#fff" stroke-width="1.5"/><text y="0" dy=".35em" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${esc(s)}</text></g>`;
+}
+function badgeIcon(x, y, level) {
+  const inner = level === 'red'
+    ? `<circle r="9" fill="${RED}" stroke="#fff" stroke-width="1.5"/><path d="M0 -5V1" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cy="4.5" r="1.3" fill="#fff"/>`
+    : `<path d="M0 -10L10 8H-10Z" fill="${YEL}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><path d="M0 -3V2" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cy="5" r="1.3" fill="#fff"/>`;
+  return `<g transform="translate(${x} ${y}) scale(${1 / view.s})">${inner}</g>`;
+}
+
+function neighborLines(f) {
+  const r = room(), R = fRect(f);
+  const all = obstacles(r, f.id).concat(wallBoxes(r));
+  const res = [];
+  const dirs = [
+    { ok: (O) => O.x1 <= R.x0 + EPS, gap: (O) => R.x0 - O.x1, perp: ['y0', 'y1'], mk: (O, m) => [O.x1, m, R.x0, m] },
+    { ok: (O) => O.x0 >= R.x1 - EPS, gap: (O) => O.x0 - R.x1, perp: ['y0', 'y1'], mk: (O, m) => [R.x1, m, O.x0, m] },
+    { ok: (O) => O.y1 <= R.y0 + EPS, gap: (O) => R.y0 - O.y1, perp: ['x0', 'x1'], mk: (O, m) => [m, O.y1, m, R.y0] },
+    { ok: (O) => O.y0 >= R.y1 - EPS, gap: (O) => O.y0 - R.y1, perp: ['x0', 'x1'], mk: (O, m) => [m, R.y1, m, O.y0] },
+  ];
+  for (const dir of dirs) {
+    let best = null;
+    for (const O of all) {
+      if (!dir.ok(O)) continue;
+      const [p0, p1] = dir.perp;
+      const lo = Math.max(R[p0], O[p0]), hi = Math.min(R[p1], O[p1]);
+      if (hi - lo <= EPS) continue;
+      const g = dir.gap(O);
+      if (!best || g < best.g) best = { g, m: (lo + hi) / 2, O };
+    }
+    if (best) res.push({ g: best.g, line: dir.mk(best.O, best.m) });
+  }
+  return res;
+}
+
+function draw() {
+  const r = room(), s = view.s, inv = 1 / s, W = r.width, D = r.depth;
+  const hatch = (id, col, bg) => `<pattern id="${id}" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="scale(${inv}) rotate(45)"><rect width="8" height="8" fill="${bg}"/><line x1="0" y1="0" x2="0" y2="8" stroke="${col}" stroke-width="3"/></pattern>`;
+  let h = `<defs>${hatch('hR', RED, 'rgba(211,47,47,.2)')}${hatch('hY', YEL, 'rgba(230,149,0,.22)')}${hatch('hF', '#8a8f98', '#cfd3d9')}</defs>`;
+  h += `<g transform="translate(${view.tx} ${view.ty}) scale(${s})">`;
+  const ns = 'vector-effect="non-scaling-stroke"';
+
+  // 床・目盛り
+  h += `<rect x="0" y="0" width="${W}" height="${D}" fill="#fff"/>`;
+  for (let x = 100; x < W; x += 100) h += `<line x1="${x}" y1="0" x2="${x}" y2="${D}" stroke="#e6e9ee" stroke-width="1" ${ns}/>`;
+  for (let y = 100; y < D; y += 100) h += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="#e6e9ee" stroke-width="1" ${ns}/>`;
+  // 壁
+  h += `<path d="M${-WALL_T} ${-WALL_T}H${W + WALL_T}V${D + WALL_T}H${-WALL_T}ZM0 0V${D}H${W}V0Z" fill="#5f6368" fill-rule="evenodd"/>`;
+  // 窓
+  for (const w of r.windows) {
+    const b = windowBand(r, w);
+    h += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.d}" fill="#a9d8f0" stroke="#2c7ba3" stroke-width="1.5" ${ns}/>`;
+  }
+  // ドア
+  for (const dr of r.doors) {
+    const g = doorGeom(r, dr), b = g.band;
+    if (dr.type === 'swing') {
+      const sign = dr.opens === 'in' ? 1 : -1;
+      const P2 = { x: g.hinge.x + g.n.x * sign * g.r, y: g.hinge.y + g.n.y * sign * g.r };
+      if (dr.opens === 'in') h += `<path d="${sectorD(g)}" fill="rgba(160,110,60,.14)" stroke="#a06e3c" stroke-width="1.2" stroke-dasharray="5 4" ${ns}/>`;
+      else h += `<path d="${sectorD(g, -1)}" fill="none" stroke="#a06e3c" stroke-width="1" stroke-dasharray="2 4" opacity=".7" ${ns}/>`;
+      h += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.d}" fill="#fff" stroke="#a06e3c" stroke-width="1.2" ${ns}/>`;
+      h += `<line x1="${g.hinge.x}" y1="${g.hinge.y}" x2="${P2.x}" y2="${P2.y}" stroke="#7a4a1f" stroke-width="3" stroke-linecap="round" ${ns}/>`;
+    } else {
+      h += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.d}" fill="#efe1c8" stroke="#a06e3c" stroke-width="1.2" ${ns}/>`;
+      const cx = b.x + b.w / 2, cy = b.y + b.d / 2, horiz = dr.wall === 'top' || dr.wall === 'bottom';
+      h += horiz
+        ? `<line x1="${b.x}" y1="${cy}" x2="${b.x1}" y2="${cy}" stroke="#7a4a1f" stroke-width="2" ${ns}/>`
+        : `<line x1="${cx}" y1="${b.y}" x2="${cx}" y2="${b.y1}" stroke="#7a4a1f" stroke-width="2" ${ns}/>`;
+    }
+  }
+  // 固定物
+  for (const x of r.fixtures) {
+    h += `<rect x="${x.x}" y="${x.y}" width="${x.w}" height="${x.d}" fill="url(#hF)" stroke="#6b7078" stroke-width="1.5" ${ns}/>`;
+    const nm = fitText(x.name, x.w * s - 4, 11);
+    if (x.d * s >= 14 && nm) h += T(x.x + x.w / 2, x.y + x.d / 2, nm, { px: 11, fill: '#333' });
+  }
+  // 前方スペース
+  for (const f of r.furniture) {
+    const fr = frontRect(f);
+    if (fr) h += `<rect x="${fr.x}" y="${fr.y}" width="${fr.w}" height="${fr.d}" fill="${f.color}" fill-opacity=".28" stroke="${f.color}" stroke-width="1.2" stroke-dasharray="4 3" ${ns}/>`;
+  }
+  // 家具(選択中を最前面)
+  const sorted = r.furniture.slice().sort((a, b) => (a.id === state.selId) - (b.id === state.selId));
+  for (const f of sorted) {
+    const R = fRect(f), lv = state.levels[f.id];
+    const stroke = lv === 'red' ? RED : lv === 'yellow' ? YEL : '#4a4f57';
+    const pw = R.w * s, ph = R.d * s, small = Math.min(pw, ph) < 24;
+    h += `<g class="furn" data-furn="${esc(f.id)}"><rect x="${R.x}" y="${R.y}" width="${R.w}" height="${R.d}" fill="${f.color}" fill-opacity=".9" stroke="${stroke}" stroke-width="${lv ? 3 : 1.5}" ${ns}/>`;
+    if (!small) {
+      // 前方向のしるし
+      const mid = [{ x: R.x0 + R.w / 2, y: R.y1 }, { x: R.x0, y: R.y0 + R.d / 2 }, { x: R.x0 + R.w / 2, y: R.y0 }, { x: R.x1, y: R.y0 + R.d / 2 }][[0, 90, 180, 270].indexOf(f.rot)];
+      h += `<g transform="translate(${mid.x} ${mid.y}) scale(${inv}) rotate(${f.rot})"><path d="M-5 -8L5 -8L0 -1Z" fill="#333" fill-opacity=".7"/></g>`;
+    }
+    const nm = fitText(f.name, pw - 8, 12);
+    if (nm && ph >= 16 && pw >= 16) {
+      const dims = `${fmt(R.w)}×${fmt(R.d)}`;
+      const showDims = ph >= 38 && textW(dims, 11) <= pw - 8;
+      h += T(R.x0 + R.w / 2, R.y0 + R.d / 2 - (showDims ? 7 : 0) * inv, nm, { px: 12, bold: true });
+      if (showDims) h += T(R.x0 + R.w / 2, R.y0 + R.d / 2 + 8 * inv, dims, { px: 11, fill: '#333' });
+    }
+    if (lv && !small) h += badgeIcon(R.x0 + 12 * inv, R.y0 + 12 * inv, lv);
+    h += '</g>';
+  }
+  // 警告の重ね表示(斜線)
+  const focus = state.warns.find((w) => w.key === state.focusKey);
+  for (const w of state.warns) {
+    const fill = w.level === 'red' ? 'url(#hR)' : 'url(#hY)', col = w.level === 'red' ? RED : YEL;
+    for (const sh of w.shapes) {
+      if (sh.sector) h += `<path d="${sectorD(sh.sector)}" fill="${fill}" stroke="${col}" stroke-width="2" ${ns}/>`;
+      else h += `<rect x="${sh.x}" y="${sh.y}" width="${sh.w}" height="${sh.d}" fill="${fill}" stroke="${col}" stroke-width="${w.kind === 'front' ? 1.5 : 2}" ${ns}/>`;
+    }
+  }
+  for (const w of state.warns) {
+    const col = w.level === 'red' ? RED : YEL, c = w.rect;
+    if (w.kind === 'aisle') h += pill(c.x + c.w / 2, c.y + c.d / 2, `${w.label}cm`, col);
+    else if (w.kind === 'overlap' || w.kind === 'window') h += badgeIcon(c.x + c.w / 2, c.y + c.d / 2, w.level);
+    else if (w.kind === 'door') {
+      const sh = w.shapes[0].sector;
+      h += badgeIcon(sh.hinge.x + (sh.u.x + sh.n.x) * sh.r * 0.55, sh.hinge.y + (sh.u.y + sh.n.y) * sh.r * 0.55, w.level);
+    } else if (w.kind === 'front') h += badgeIcon(c.x + c.w / 2, c.y + c.d / 2, w.level);
+  }
+  // 選択中の強調・距離表示
+  const sf = selFurn();
+  if (sf) {
+    const R = fRect(sf);
+    h += `<rect x="${R.x}" y="${R.y}" width="${R.w}" height="${R.d}" fill="none" stroke="${BLUE}" stroke-width="3" stroke-dasharray="7 4" ${ns}/>`;
+    if (state.dragging || state.ruler) {
+      for (const n of neighborLines(sf)) {
+        const [x1, y1, x2, y2] = n.line;
+        if (n.g < 0.05) continue;
+        h += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${BLUE}" stroke-width="2" ${ns}/>`;
+        h += pill((x1 + x2) / 2, (y1 + y2) / 2, `${fmt(n.g)}cm`, BLUE);
+      }
+    }
+  }
+  if (focus) {
+    const c = focus.rect, p = 6 * inv;
+    h += `<rect class="pulse" x="${c.x - p}" y="${c.y - p}" width="${c.w + 2 * p}" height="${c.d + 2 * p}" fill="none" stroke="${BLUE}" stroke-width="3" ${ns}/>`;
+  }
+  // 部屋寸法
+  h += T(W / 2, -WALL_T, `${fmt(W)}cm`, { px: 12, dy: -10, bold: true, fill: '#444' });
+  h += T(-WALL_T, D / 2, `${fmt(D)}cm`, { px: 12, dx: -8, anchor: 'end', bold: true, fill: '#444' });
+  h += '</g>';
+  stage.innerHTML = h;
+}
+
+/* =====================================================================
+ * 表示(ビュー)制御
+ * ===================================================================== */
+function stageSize() {
+  const b = stage.getBoundingClientRect();
+  return { w: b.width, h: b.height };
+}
+function fitView() {
+  const r = room(), { w, h } = stageSize();
+  view.w = w; view.h = h;
+  if (w < 10 || h < 10) return;
+  const mx = 72, my = 60;   // 寸法ラベル(左・上)と余白ぶん
+  const s = Math.min((w - mx) / (r.width + 2 * WALL_T), (h - my) / (r.depth + 2 * WALL_T));
+  view.s = clamp(s, 0.05, 20);
+  view.tx = (w - r.width * view.s) / 2 + 20;
+  view.ty = (h - r.depth * view.s) / 2 + 14;
+  state.fitMode = true;
+  requestRender();
+}
+function syncSize() {
+  const { w, h } = stageSize();
+  if (Math.abs(w - view.w) < 1 && Math.abs(h - view.h) < 1) return;
+  if (gesture || pinch) { view.w = view.w || w; return; }   // 操作中は保留し、終了時に再計測する
+  view.w = w; view.h = h;
+  if (state.fitMode) fitView(); else requestRender();
+}
+function zoomAt(cx, cy, k) {
+  const s2 = clamp(view.s * k, 0.05, 20), wx = (cx - view.tx) / view.s, wy = (cy - view.ty) / view.s;
+  view.tx = cx - wx * s2; view.ty = cy - wy * s2; view.s = s2;
+  state.fitMode = false;
+  requestRender();
+}
+function zoomToRect(rc) {
+  const { w, h } = stageSize();
+  const tw = Math.max(rc.w * 2.2, 140), th = Math.max(rc.d * 2.2, 140);
+  view.s = clamp(Math.min(w / tw, h / th), 0.05, 20);
+  view.tx = w / 2 - (rc.x + rc.w / 2) * view.s;
+  view.ty = h / 2 - (rc.y + rc.d / 2) * view.s;
+  state.fitMode = false;
+  requestRender();
+}
+function ensureVisible(f) {
+  const R = fRect(f), pad = 16;
+  const l = R.x0 * view.s + view.tx, t = R.y0 * view.s + view.ty, rr = R.x1 * view.s + view.tx, b = R.y1 * view.s + view.ty;
+  if (l >= pad && t >= pad && rr <= view.w - pad && b <= view.h - pad) return;
+  view.tx = view.w / 2 - (R.x0 + R.w / 2) * view.s;
+  view.ty = view.h / 2 - (R.y0 + R.d / 2) * view.s;
+  state.fitMode = false;
+  requestRender();
+}
+
+/* =====================================================================
+ * ポインタ操作(ドラッグ・パン・ピンチ・ホイール)
+ * ===================================================================== */
+const ptrs = new Map();
+let gesture = null, pinch = null;
+
+function localPt(e) { const b = stage.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; }
+const snapV = (v) => { const sn = state.data.settings.snap; return Math.round(v / sn) * sn; };
+
+stage.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  try { stage.setPointerCapture(e.pointerId); } catch (_) { /* noop */ }
+  ptrs.set(e.pointerId, localPt(e));
+  if (ptrs.size === 2) { startPinch(); return; }
+  if (ptrs.size > 2) return;
+  const hit = e.target.closest && e.target.closest('[data-furn]');
+  const g = { id: hit ? hit.dataset.furn : null, sx: e.clientX, sy: e.clientY, moved: false, tx0: view.tx, ty0: view.ty };
+  if (g.id) {
+    const f = findF(g.id);
+    if (!f) return;
+    g.ox = f.x; g.oy = f.y;
+    if (state.mode === 'edit') { g.drag = true; }
+    if (state.selId !== g.id) select(g.id, { fromStage: true });
+  }
+  gesture = g;
+});
+
+stage.addEventListener('pointermove', (e) => {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, localPt(e));
+  if (pinch) { updatePinch(); return; }
+  const g = gesture;
+  if (!g) return;
+  const dx = e.clientX - g.sx, dy = e.clientY - g.sy;
+  if (!g.moved && Math.hypot(dx, dy) < 4) return;
+  g.moved = true;
+  if (g.drag) {
+    const f = findF(g.id), r = room(), R = fRect(f);
+    f.x = clamp(snapV(g.ox + dx / view.s), -200, r.width + 200 - R.w);
+    f.y = clamp(snapV(g.oy + dy / view.s), -200, r.depth + 200 - R.d);
+    state.dragging = true;
+    changed({ panel: 'sync' });
+  } else {
+    view.tx = g.tx0 + dx; view.ty = g.ty0 + dy;
+    state.fitMode = false;
+    requestRender();
+  }
+});
+
+function endPointer(e) {
+  const had = ptrs.delete(e.pointerId);
+  if (!had) return;
+  if (pinch) { if (ptrs.size < 2) pinch = null; gesture = null; syncSize(); return; }
+  const g = gesture;
+  gesture = null;
+  if (!g) return;
+  state.dragging = false;
+  if (!g.moved && !g.id) deselect();
+  if (g.moved && g.drag) changed({ panel: 'sync' });
+  requestRender();
+  syncSize();
+}
+stage.addEventListener('pointerup', endPointer);
+stage.addEventListener('pointercancel', endPointer);
+stage.addEventListener('lostpointercapture', endPointer);
+
+function startPinch() {
+  if (gesture && gesture.drag && gesture.moved) {   // ドラッグ途中で2本目の指が触れたら元の位置に戻す
+    const f = findF(gesture.id);
+    if (f) { f.x = gesture.ox; f.y = gesture.oy; }
+  }
+  gesture = null; state.dragging = false;
+  const [a, b] = [...ptrs.values()];
+  const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  pinch = { d0: d, s0: view.s, wx: (c.x - view.tx) / view.s, wy: (c.y - view.ty) / view.s };
+  changed({ panel: 'sync' });
+}
+function updatePinch() {
+  const [a, b] = [...ptrs.values()];
+  const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  view.s = clamp(pinch.s0 * d / pinch.d0, 0.05, 20);
+  view.tx = c.x - pinch.wx * view.s; view.ty = c.y - pinch.wy * view.s;
+  state.fitMode = false;
+  requestRender();
+}
+stage.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const p = localPt(e);
+  zoomAt(p.x, p.y, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)));
+}, { passive: false });
+
+new ResizeObserver(() => syncSize()).observe($('#stageWrap'));
+
+/* =====================================================================
+ * 選択・編集操作
+ * ===================================================================== */
+function select(id, o = {}) {
+  state.selId = id;
+  state.focusKey = null;
+  state.tab = 'furn';
+  state.sheet = true;
+  updateChrome();
+  renderPanel();
+  syncSize();
+  if (!o.fromStage) { const f = findF(id); if (f) ensureVisible(f); }
+  requestRender();
+}
+function deselect() {
+  if (!state.selId && !state.focusKey) return;
+  state.selId = null; state.focusKey = null;
+  if (state.tab === 'furn') state.sheet = false;
+  updateChrome(); renderPanel(); syncSize(); requestRender();
+}
+function nextId(arr, prefix) {
+  let n = 1;
+  const used = new Set(arr.map((o) => o.id));
+  while (used.has(prefix + n)) n++;
+  return prefix + n;
+}
+function freeSpot(w, d) {
+  const r = room(), obs = obstacles(r).map((o) => box(o.x0, o.y0, o.w, o.d));
+  for (let y = 0; y + d <= r.depth; y += 10) for (let x = 0; x + w <= r.width; x += 10) {
+    const c = box(x, y, w, d);
+    if (!obs.some((o) => inter(o, c))) return { x, y };
+  }
+  return { x: 0, y: 0 };
+}
+function addFurniture() {
+  if (state.mode !== 'edit') return;
+  const r = room(), w = 60, d = 60, p = freeSpot(w, d);
+  const palette = ['#8fb3d9', '#e0c28f', '#a8d5a2', '#e5a6a6', '#c3b1e1', '#f2d388'];
+  const f = { id: nextId(r.furniture, 'k'), name: '家具', x: p.x, y: p.y, w, d, h: 60, rot: 0, front: 0, color: palette[r.furniture.length % palette.length] };
+  r.furniture.push(f);
+  changed({ panel: 'none' });
+  select(f.id);
+  const nameInput = panelBody.querySelector('[data-key="name"]');
+  if (nameInput && matchMedia('(min-width:768px)').matches) { nameInput.focus(); nameInput.select(); }
+}
+function rotateSel() {
+  const f = selFurn();
+  if (!f || state.mode !== 'edit') return;
+  const R = fRect(f), cx = R.x0 + R.w / 2, cy = R.y0 + R.d / 2;
+  f.rot = (f.rot + 90) % 360;
+  const N = fRect(f), r = room();
+  f.x = Math.round(cx - N.w / 2); f.y = Math.round(cy - N.d / 2);
+  if (N.w <= r.width) f.x = clamp(f.x, 0, r.width - N.w);
+  if (N.d <= r.depth) f.y = clamp(f.y, 0, r.depth - N.d);
+  changed({ panel: 'full' });
+}
+function duplicateSel() {
+  const f = selFurn(), r = room();
+  if (!f || state.mode !== 'edit') return;
+  const c = { ...f, id: nextId(r.furniture, 'k'), name: f.name + '(コピー)', x: f.x + 20, y: f.y + 20 };
+  r.furniture.push(c);
+  changed({ panel: 'none' });
+  select(c.id);
+}
+function deleteSel() {
+  const f = selFurn(), r = room();
+  if (!f || state.mode !== 'edit') return;
+  if (!confirm(`「${f.name}」を削除しますか?`)) return;
+  r.furniture = r.furniture.filter((o) => o.id !== f.id);
+  state.selId = null;
+  if (state.tab === 'furn') state.sheet = false;
+  changed({ panel: 'full' });
+  syncSize();
+}
+function nudge(dx, dy) {
+  const f = selFurn();
+  if (!f || state.mode !== 'edit') return;
+  f.x = Math.round((f.x + dx) * 100) / 100; f.y = Math.round((f.y + dy) * 100) / 100;
+  changed({ panel: 'sync' });
+}
+
+/* =====================================================================
+ * パネル(UI)
+ * ===================================================================== */
+const TABS = [['furn', '家具'], ['warn', '警告'], ['room', '部屋'], ['file', '保存']];
+function renderTabs() {
+  const n = state.warns.length;
+  tabsEl.innerHTML = TABS.map(([k, l]) => `<button data-tab="${k}" class="${state.tab === k ? 'on' : ''}">${l}${k === 'warn' && n ? `(${n})` : ''}</button>`).join('')
+    + '<button id="closeSheet" data-act="closeSheet" aria-label="閉じる">✕</button>';
+}
+function fld(label, col, id, key, val, o = {}) {
+  const t = o.type || 'number';
+  const extra = t === 'number' ? 'inputmode="decimal" step="any"' : '';
+  return `<label class="fld ${o.cls || ''}"><span>${label}</span><input type="${t}" ${extra} data-col="${col}" data-id="${esc(id)}" data-key="${key}" value="${esc(val)}" autocomplete="off"></label>`;
+}
+function sel(label, col, id, key, val, opts, cls = '') {
+  return `<label class="fld ${cls}"><span>${label}</span><select data-col="${col}" data-id="${esc(id)}" data-key="${key}">${opts.map(([v, l]) => `<option value="${v}" ${v === val ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+}
+const WALL_OPTS = WALLS.map((w) => [w, WALL_LABEL[w] + 'の壁']);
+
+function renderPanel() {
+  renderTabs();
+  app.classList.toggle('sheet', state.sheet);
+  app.classList.toggle('tall', state.tab === 'room' || state.tab === 'file');
+  panelBody.innerHTML = ({ furn: furnTab, warn: warnTab, room: roomTab, file: fileTab })[state.tab]();
+  if (state.tab === 'file') updateShareInfo();
+}
+
+function furnTab() {
+  const r = room(), f = selFurn(), ro = state.mode !== 'edit';
+  if (!f) {
+    return `<div class="stack">
+      ${ro ? '' : '<button class="btn primary" data-act="addFurn" style="width:100%">＋ 家具を追加</button>'}
+      <div class="list">${r.furniture.length ? r.furniture.map((o) => {
+        const lv = state.levels[o.id];
+        return `<button class="item" data-act="selectFurn" data-id="${esc(o.id)}"><span class="chip" style="background:${o.color}"></span><span style="flex:1;min-width:0">${esc(o.name)} <span class="note">${fmt(o.w)}×${fmt(o.d)}</span></span>${lv ? `<span class="ico ${lv === 'red' ? 'red' : 'yel'}">!</span>` : ''}</button>`;
+      }).join('') : '<p class="note">家具がありません。「＋ 家具を追加」から置いてみましょう。</p>'}</div>
+      <p class="note">家具をタップすると選択できます。${ro ? '閲覧モードでは動かせません。' : 'ドラッグで移動できます。'}</p></div>`;
+  }
+  const mine = state.warns.filter((w) => w.ids.includes(f.id));
+  const warnBox = mine.length ? `<div class="warnbox">${mine.map((w) => `${w.level === 'red' ? '✕' : '▲'} ${esc(w.text)}`).join('<br>')}</div>` : '';
+  if (ro) {
+    return `<div class="stack"><h3><span class="chip" style="display:inline-block;background:${f.color};vertical-align:middle"></span> ${esc(f.name)}</h3>
+      <p>幅 ${fmt(f.w)} × 奥行き ${fmt(f.d)} × 高さ ${fmt(f.h)} cm<br>前方スペース ${fmt(f.front)} cm / 向き ${f.rot}°<br>位置 X ${fmt(f.x)}, Y ${fmt(f.y)}</p>
+      ${warnBox}<button class="btn" data-act="deselect" style="width:100%">一覧に戻る</button></div>`;
+  }
+  const pad = (n) => `<div class="pad">
+      <span></span><button class="btn" data-act="nudge" data-dx="0" data-dy="${-n}" aria-label="上へ${n}cm">↑${n}</button><span></span>
+      <button class="btn" data-act="nudge" data-dx="${-n}" data-dy="0" aria-label="左へ${n}cm">←${n}</button><span></span><button class="btn" data-act="nudge" data-dx="${n}" data-dy="0" aria-label="右へ${n}cm">→${n}</button>
+      <span></span><button class="btn" data-act="nudge" data-dx="0" data-dy="${n}" aria-label="下へ${n}cm">↓${n}</button><span></span></div>`;
+  return `<div class="stack">
+    ${fld('名前', 'furniture', f.id, 'name', f.name, { type: 'text' })}
+    <div class="grid2">
+      ${fld('X (cm)', 'furniture', f.id, 'x', f.x)}${fld('Y (cm)', 'furniture', f.id, 'y', f.y)}
+    </div>
+    <div class="pads">
+      <div class="padwrap"><small>1cm 移動</small>${pad(1)}</div>
+      <div class="padwrap"><small>10cm 移動</small>${pad(10)}</div>
+    </div>
+    <div class="grid3">
+      <button class="btn" data-act="rot">↻ 回転</button>
+      <button class="btn" data-act="dup">複製</button>
+      <button class="btn danger" data-act="del">削除</button>
+    </div>
+    ${warnBox}
+    <div class="grid2">
+      ${fld('幅 (cm)', 'furniture', f.id, 'w', f.w)}${fld('奥行き (cm)', 'furniture', f.id, 'd', f.d)}
+      ${fld('高さ (cm)', 'furniture', f.id, 'h', f.h)}${fld('前方スペース (cm)', 'furniture', f.id, 'front', f.front)}
+    </div>
+    <div class="grid2">
+      ${fld('色', 'furniture', f.id, 'color', f.color, { type: 'color' })}
+      <div class="fld"><span>向き</span><div style="height:44px;display:flex;align-items:center">${f.rot}°(前方は${['下', '左', '上', '右'][f.rot / 90]}向き)</div></div>
+    </div>
+    <button class="btn" data-act="deselect" style="width:100%">選択を解除</button>
+  </div>`;
+}
+
+function warnTab() {
+  const ws = state.warns, red = ws.filter((w) => w.level === 'red').length, yel = ws.length - red;
+  if (!ws.length) return '<p class="good">✓ 問題は見つかりませんでした。</p><p class="note">重なり・通路幅・ドアの開閉・前方スペース・窓の前を判定しています。</p>';
+  return `<p class="note">赤(要対処) ${red} 件 / 黄(注意) ${yel} 件。タップすると該当箇所を拡大します。</p><div class="list">${ws.map((w) =>
+    `<button class="item witem ${w.level === 'red' ? 'red' : 'yel'}" data-act="focusWarn" data-key="${esc(w.key)}"><span class="ico ${w.level === 'red' ? 'red' : 'yel'}">!</span><span style="flex:1;min-width:0;font-size:15px">${esc(w.text)}</span></button>`).join('')}</div>`;
+}
+
+function roomTab() {
+  const r = room(), S = state.data.settings, ro = state.mode !== 'edit';
+  const add = (act, label) => (ro ? '' : `<button class="btn" data-act="${act}" style="width:100%;margin-top:8px">${label}</button>`);
+  const del = (col, id) => (ro ? '' : `<button class="btn danger" data-act="delItem" data-col="${col}" data-id="${esc(id)}" aria-label="削除">✕</button>`);
+  return `<fieldset ${ro ? 'disabled' : ''}><div class="stack">
+    <h3>部屋</h3>
+    ${fld('部屋名', 'room', r.id, 'name', r.name, { type: 'text' })}
+    <div class="grid2">${fld('幅 (cm)', 'room', r.id, 'width', r.width)}${fld('奥行き (cm)', 'room', r.id, 'depth', r.depth)}</div>
+    <p class="note">座標は部屋の内側の左上が原点(0,0)、単位はcmです。</p>
+
+    <h3>固定物(柱・出っ張り)</h3>
+    ${r.fixtures.map((o) => `<div class="card"><div class="cardhead"><span>${esc(o.name)}</span>${del('fixtures', o.id)}</div><div class="grid2">
+      ${fld('名前', 'fixtures', o.id, 'name', o.name, { type: 'text', cls: 'full' })}
+      ${fld('X', 'fixtures', o.id, 'x', o.x)}${fld('Y', 'fixtures', o.id, 'y', o.y)}
+      ${fld('幅', 'fixtures', o.id, 'w', o.w)}${fld('奥行き', 'fixtures', o.id, 'd', o.d)}</div></div>`).join('')}
+    ${add('addFixture', '＋ 固定物を追加')}
+
+    <h3>ドア</h3>
+    ${r.doors.map((o, i) => `<div class="card"><div class="cardhead"><span>ドア${i + 1}</span>${del('doors', o.id)}</div><div class="grid2">
+      ${sel('壁', 'doors', o.id, 'wall', o.wall, WALL_OPTS)}${sel('種類', 'doors', o.id, 'type', o.type, [['swing', '開き戸'], ['sliding', '引き戸']])}
+      ${fld('始点からの距離', 'doors', o.id, 'offset', o.offset)}${fld('幅', 'doors', o.id, 'width', o.width)}
+      ${sel('ヒンジ側', 'doors', o.id, 'hinge', o.hinge, [['left', '始点側(左・上)'], ['right', '終点側(右・下)']])}${sel('開く向き', 'doors', o.id, 'opens', o.opens, [['in', '室内側'], ['out', '室外側']])}</div></div>`).join('')}
+    ${add('addDoor', '＋ ドアを追加')}
+
+    <h3>窓</h3>
+    ${r.windows.map((o, i) => `<div class="card"><div class="cardhead"><span>窓${i + 1}</span>${del('windows', o.id)}</div><div class="grid2">
+      ${sel('壁', 'windows', o.id, 'wall', o.wall, WALL_OPTS)}${fld('下端の高さ(掃き出し窓は0)', 'windows', o.id, 'sill', o.sill)}
+      ${fld('始点からの距離', 'windows', o.id, 'offset', o.offset)}${fld('幅', 'windows', o.id, 'width', o.width)}</div></div>`).join('')}
+    ${add('addWindow', '＋ 窓を追加')}
+
+    <h3>判定の設定</h3>
+    <div class="grid2">
+      ${fld('通路の目安 (cm)', 'settings', 's', 'aisleMin', S.aisleMin)}${fld('通れない幅 (cm)', 'settings', 's', 'aisleTight', S.aisleTight)}
+      ${fld('吸着 (cm)', 'settings', 's', 'snap', S.snap)}${fld('無視するすき間 (cm)', 'settings', 's', 'gapIgnore', S.gapIgnore)}
+    </div>
+    <p class="note">すき間が「通れない幅」未満なら赤、「通路の目安」未満なら黄。「無視するすき間」以下は壁際の余白とみなして判定しません。</p>
+  </div></fieldset>
+  <p class="note">ドアの「始点」は、上・下の壁では左端、左・右の壁では上端です。</p>`;
+}
+
+function fileTab() {
+  const ro = state.mode !== 'edit';
+  return `<div class="stack">
+    <h3>共有リンク</h3>
+    <p class="note">データはURLの「#」以降に入ります。サーバーには送られません。</p>
+    <button class="btn primary" data-act="copyLink" style="width:100%">共有リンクをコピー</button>
+    <div id="shareInfo" class="note">URLの長さを計算中…</div>
+    <input id="shareUrl" class="urlbox" readonly aria-label="共有リンク" hidden>
+
+    <h3>ファイル</h3>
+    <div class="grid2">
+      <button class="btn" data-act="exportJson">JSONを書き出す</button>
+      <button class="btn" data-act="importJson" ${ro ? 'disabled' : ''}>JSONを読み込む</button>
+    </div>
+    ${ro ? '<p class="note">読み込み・初期化は編集モードで行えます。</p>' : ''}
+
+    <h3>データの初期化</h3>
+    <div class="grid2">
+      <button class="btn" data-act="newRoom" ${ro ? 'disabled' : ''}>空の部屋にする</button>
+      <button class="btn" data-act="sample" ${ro ? 'disabled' : ''}>サンプルに戻す</button>
+    </div>
+    <p class="note">変更は自動でこのブラウザに保存されます。</p>
+  </div>`;
+}
+
+/* ---- 入力欄の反映 ---- */
+function lookup(col, id) {
+  const r = room();
+  if (col === 'room') return r;
+  if (col === 'settings') return state.data.settings;
+  return (r[col] || []).find((o) => o.id === id);
+}
+function applyField(t, commit) {
+  if (state.mode !== 'edit') return;
+  const { col, id, key } = t.dataset;
+  const obj = lookup(col, id);
+  if (!obj) return;
+  if (t.type === 'number') {
+    let v = parseFloat(t.value);
+    if (!Number.isFinite(v)) { if (commit) t.value = obj[key]; return; }
+    const [a, b] = LIM[col + '.' + key] || LIM[key] || [-1e6, 1e6];
+    obj[key] = clamp(v, a, b);
+  } else {
+    obj[key] = t.value;
+    if (key === 'name' && !t.value.trim()) obj[key] = '';
+  }
+  let rerender = false;
+  if ((col === 'doors' || col === 'windows') && (commit || t.tagName === 'SELECT') && ['offset', 'width', 'wall'].includes(key)) {
+    const len = wallLen(room(), obj.wall);
+    obj.width = Math.min(obj.width, len);
+    const off = clamp(obj.offset, 0, Math.max(0, len - obj.width));
+    if (off !== obj.offset) { obj.offset = off; rerender = true; }
+  }
+  if (col === 'room') {
+    if (key === 'name') updateChrome();
+    else fitView();
+  }
+  if (col === 'settings' && commit && key === 'aisleTight' && obj.aisleTight > obj.aisleMin) { obj.aisleMin = obj.aisleTight; rerender = true; }
+  changed({ panel: 'none' });
+  if (commit && t.type === 'number' && !rerender) t.value = obj[key];
+  if (rerender) renderPanel();
+}
+panelBody.addEventListener('input', (e) => { if (e.target.dataset && e.target.dataset.col) applyField(e.target, false); });
+panelBody.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.col) applyField(e.target, true); });
+
+function syncInputs() {
+  const f = selFurn();
+  if (!f || state.tab !== 'furn') return;
+  panelBody.querySelectorAll('[data-col="furniture"]').forEach((inp) => {
+    if (inp === document.activeElement || inp.dataset.id !== f.id) return;
+    const v = String(f[inp.dataset.key]);
+    if (inp.value !== v) inp.value = v;
+  });
+}
+
+/* =====================================================================
+ * 変更通知・クロム(上部バーなど)
+ * ===================================================================== */
+function changed(o = {}) {
+  recompute();
+  updateChrome();
+  requestRender();
+  if (o.panel === 'full') renderPanel();
+  else if (state.tab === 'warn' || (state.tab === 'furn' && !selFurn())) renderPanel();
+  else syncInputs();
+  scheduleSave();
+  if (state.tab === 'file') scheduleShareInfo();
+}
+
+function updateChrome() {
+  const r = room(), n = state.warns.length;
+  const reds = state.warns.filter((w) => w.level === 'red').length;
+  $('#btnRoom').textContent = `${r.name}(${fmt(r.width)}×${fmt(r.depth)})`;
+  const b = $('#badge');
+  b.textContent = n ? `⚠ ${n}` : '✓ OK';
+  b.className = reds ? 'red' : n ? 'yel' : '';
+  b.setAttribute('aria-label', n ? `警告 ${n} 件(赤 ${reds} 件)` : '警告なし');
+  const ro = state.mode !== 'edit';
+  app.classList.toggle('edit', !ro);
+  app.classList.toggle('view', ro);
+  $('#btnMode').textContent = ro ? '✎ 編集する' : '👁 閲覧モード';
+  $('#btnAdd').disabled = ro;
+  const notice = $('#notice');
+  notice.classList.toggle('show', state.locked);
+  notice.querySelector('span').textContent = '共有リンクの内容を閲覧中です。このブラウザの保存データはまだ変更されていません。';
+  $('#btnRuler').setAttribute('aria-pressed', String(state.ruler));
+  $('#rulerHint').hidden = !(state.ruler && !state.selId);
+  const wt = tabsEl.querySelector('[data-tab="warn"]');
+  if (wt) wt.textContent = '警告' + (n ? `(${n})` : '');
+}
+
+function setMode(m) {
+  if (m === 'edit' && state.locked) {
+    const local = readLocalRaw();
+    if (local && local !== JSON.stringify(state.data)) {
+      if (!confirm('編集を始めると、このブラウザに保存されている配置データが共有リンクの内容で上書きされます。よろしいですか?')) return;
+    }
+    state.locked = false;
+    history.replaceState(null, '', location.pathname + location.search);
+    saveNow();
+  }
+  state.mode = m;
+  if (m === 'view') { state.dragging = false; }
+  updateChrome();
+  renderPanel();
+  requestRender();
+}
+
+function openTab(tab) {
+  state.tab = tab;
+  state.sheet = true;
+  renderPanel();
+  syncSize();
+}
+
+/* =====================================================================
+ * 保存(localStorage / JSON / URL共有)
+ * ===================================================================== */
+let saveTimer = null;
+function readLocalRaw() { try { return localStorage.getItem(STORAGE_KEY); } catch (_) { return null; } }
+function saveNow() {
+  clearTimeout(saveTimer);
+  if (state.locked) return;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data)); } catch (_) { /* 容量超過・プライベートモード等 */ }
+}
+function scheduleSave() {
+  if (state.locked) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 250);
+}
+function loadLocal() {
+  const raw = readLocalRaw();
+  if (!raw) return null;
+  try { return normalize(JSON.parse(raw)); } catch (_) { return null; }
+}
+
+function b64url(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function unb64url(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+async function pipeBytes(bytes, stream) {
+  const w = stream.writable.getWriter();
+  w.write(bytes); w.close();
+  return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+}
+async function encodeShare(data) {
+  if (typeof CompressionStream === 'undefined') throw new Error('このブラウザは圧縮に対応していません');
+  const z = await pipeBytes(new TextEncoder().encode(JSON.stringify(data)), new CompressionStream('deflate-raw'));
+  return 'v1.' + b64url(z);
+}
+async function decodeShare(code) {
+  if (!code.startsWith('v1.')) throw new Error('未対応の形式です');
+  if (typeof DecompressionStream === 'undefined') throw new Error('このブラウザは展開に対応していません');
+  const raw = await pipeBytes(unb64url(code.slice(3)), new DecompressionStream('deflate-raw'));
+  return normalize(JSON.parse(new TextDecoder().decode(raw)));
+}
+async function shareUrl() {
+  const base = location.href.split('#')[0];
+  return base + '#' + await encodeShare(state.data);
+}
+
+let shareTimer = null;
+function scheduleShareInfo() { clearTimeout(shareTimer); shareTimer = setTimeout(updateShareInfo, 300); }
+async function updateShareInfo() {
+  const el = $('#shareInfo');
+  if (!el) return;
+  try {
+    const url = await shareUrl();
+    const el2 = $('#shareInfo');
+    if (!el2) return;
+    const n = url.length;
+    el2.innerHTML = `URLの長さ: <b>${n.toLocaleString()}</b> 文字` + (n > 2000 ? '<div class="warnbox">⚠ 2,000文字を超えています。LINEやメールなど一部のアプリで、リンクが途中で切れることがあります。長い場合はJSONファイルでの共有も使ってください。</div>' : '');
+  } catch (e) {
+    const el2 = $('#shareInfo');
+    if (el2) el2.textContent = '共有リンクを作れません: ' + e.message;
+  }
+}
+async function copyLink() {
+  try {
+    const url = await shareUrl();
+    let ok = false;
+    try { await navigator.clipboard.writeText(url); ok = true; } catch (_) { /* フォールバックへ */ }
+    const box = $('#shareUrl');
+    if (box) { box.hidden = false; box.value = url; if (!ok) { box.focus(); box.select(); try { ok = document.execCommand('copy'); } catch (_) { /* noop */ } } }
+    toast(ok ? '共有リンクをコピーしました' : 'コピーできませんでした。下の欄から手動でコピーしてください');
+  } catch (e) { toast('共有リンクを作れません: ' + e.message); }
+}
+function exportJson() {
+  const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  const d = new Date(), p = (n) => String(n).padStart(2, '0');
+  a.href = URL.createObjectURL(blob);
+  a.download = `layout-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function importJsonFile(file) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    try {
+      const data = normalize(JSON.parse(fr.result));
+      if (!confirm('現在の配置を、読み込んだファイルの内容で置き換えますか?')) return;
+      replaceData(data);
+      toast('読み込みました');
+    } catch (e) { toast('読み込めませんでした: ' + e.message); }
+  };
+  fr.onerror = () => toast('ファイルを読めませんでした');
+  fr.readAsText(file);
+}
+function replaceData(data) {
+  state.data = data;
+  state.selId = null; state.focusKey = null;
+  if (state.tab === 'furn') state.sheet = false;
+  recompute();
+  updateChrome();
+  renderPanel();
+  syncSize();
+  fitView();
+  scheduleSave();
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* =====================================================================
+ * クリック操作(イベント委譲)
+ * ===================================================================== */
+document.addEventListener('click', (e) => {
+  const tabBtn = e.target.closest('[data-tab]');
+  if (tabBtn) { openTab(tabBtn.dataset.tab); return; }
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  const d = b.dataset, r = room();
+  switch (d.act) {
+    case 'openRoom': openTab('room'); break;
+    case 'openWarn': openTab('warn'); break;
+    case 'openMenu':
+      if (state.sheet && matchMedia('(max-width:767px)').matches) { state.sheet = false; renderPanel(); syncSize(); } else openTab(state.tab === 'furn' && !selFurn() ? 'room' : state.tab);
+      break;
+    case 'openShare': openTab('file'); break;
+    case 'closeSheet': state.sheet = false; if (state.tab === 'furn') state.selId = null; updateChrome(); renderPanel(); syncSize(); requestRender(); break;
+    case 'startEdit': setMode('edit'); break;
+    case 'toggleMode': setMode(state.mode === 'edit' ? 'view' : 'edit'); break;
+    case 'ruler': state.ruler = !state.ruler; updateChrome(); requestRender(); break;
+    case 'fit': fitView(); break;
+    case 'zoomIn': zoomAt(view.w / 2, view.h / 2, 1.3); break;
+    case 'zoomOut': zoomAt(view.w / 2, view.h / 2, 1 / 1.3); break;
+    case 'addFurn': addFurniture(); break;
+    case 'selectFurn': select(d.id); break;
+    case 'deselect': deselect(); break;
+    case 'rot': rotateSel(); break;
+    case 'dup': duplicateSel(); break;
+    case 'del': deleteSel(); break;
+    case 'nudge': nudge(Number(d.dx), Number(d.dy)); break;
+    case 'focusWarn': {
+      const w = state.warns.find((o) => o.key === d.key);
+      if (w) { state.focusKey = w.key; zoomToRect(w.rect); }
+      break;
+    }
+    case 'addFixture': r.fixtures.push({ id: nextId(r.fixtures, 'f'), name: '出っ張り', x: 0, y: 0, w: 30, d: 30 }); changed({ panel: 'full' }); break;
+    case 'addDoor': r.doors.push({ id: nextId(r.doors, 'd'), wall: 'bottom', offset: Math.min(20, Math.max(0, r.width - 80)), width: 80, type: 'swing', hinge: 'left', opens: 'in' }); changed({ panel: 'full' }); break;
+    case 'addWindow': r.windows.push({ id: nextId(r.windows, 'w'), wall: 'top', offset: Math.min(100, Math.max(0, r.width - 100)), width: Math.min(160, r.width), sill: 90 }); changed({ panel: 'full' }); break;
+    case 'delItem': {
+      r[d.col] = r[d.col].filter((o) => o.id !== d.id);
+      changed({ panel: 'full' });
+      break;
+    }
+    case 'copyLink': copyLink(); break;
+    case 'exportJson': exportJson(); break;
+    case 'importJson': $('#fileIn').click(); break;
+    case 'newRoom': if (confirm('すべての配置を消して、空の部屋にしますか?(判定の設定は残ります)')) replaceData(emptyData(state.data.settings)); break;
+    case 'sample': if (confirm('現在の配置を消して、サンプルに戻しますか?')) replaceData(sampleData()); break;
+  }
+});
+$('#fileIn').addEventListener('change', (e) => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (f) importJsonFile(f);
+});
+
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+  const f = selFurn();
+  if (!f || state.mode !== 'edit') return;
+  const n = e.shiftKey ? 10 : 1;
+  switch (e.key) {
+    case 'ArrowLeft': nudge(-n, 0); break;
+    case 'ArrowRight': nudge(n, 0); break;
+    case 'ArrowUp': nudge(0, -n); break;
+    case 'ArrowDown': nudge(0, n); break;
+    case 'Delete': case 'Backspace': deleteSel(); break;
+    case 'r': case 'R': rotateSel(); break;
+    case 'Escape': deselect(); break;
+    default: return;
+  }
+  e.preventDefault();
+});
+
+window.addEventListener('hashchange', () => { if (location.hash.length > 1) loadFromHash(); });
+window.addEventListener('pagehide', saveNow);
+
+/* =====================================================================
+ * 起動
+ * ===================================================================== */
+async function loadFromHash() {
+  try {
+    const data = await decodeShare(location.hash.slice(1));
+    state.data = data;
+    state.locked = true; state.mode = 'view';
+    state.selId = null; state.focusKey = null; state.sheet = false;
+    recompute(); updateChrome(); renderPanel(); syncSize(); fitView();
+    return true;
+  } catch (e) {
+    toast('共有リンクを読み込めませんでした: ' + e.message);
+    return false;
+  }
+}
+
+async function boot() {
+  state.data = loadLocal() || sampleData();
+  recompute();
+  updateChrome();
+  renderPanel();
+  const { w, h } = stageSize();
+  view.w = w; view.h = h;
+  fitView();
+  if (location.hash.length > 1) await loadFromHash();
+  window.__app = { state, view, room, computeWarnings, fitView };   // 動作確認用
+}
+boot();
+})();
+</script>
+</body>
+</html>

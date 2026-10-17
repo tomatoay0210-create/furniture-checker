@@ -37,15 +37,16 @@ button{cursor:pointer}
 #stageWrap{position:relative;flex:1;min-height:0;background:#e9ebee;overflow:hidden}
 #stage{display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #stage *{pointer-events:none}
-#stage .furn,#stage .furn *{pointer-events:auto}
-#app.edit #stage .furn{cursor:move}
+#stage .furn,#stage .furn *,#stage .itm,#stage .itm *{pointer-events:auto}
+#app.edit #stage .furn,#app.edit #stage .itm{cursor:move}
 .pulse{animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.3}}
 #fab{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .fabbtn{min-width:44px;height:44px;padding:0 12px;border:1px solid #b7bcc4;border-radius:22px;background:rgba(255,255,255,.95);box-shadow:0 1px 4px rgba(0,0,0,.2);font-weight:700}
 .fabrow{display:flex;gap:8px}
 .fabbtn[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:#fff}
-#rulerHint{position:absolute;left:8px;bottom:8px;max-width:calc(100% - 150px);padding:6px 10px;border-radius:8px;background:rgba(21,101,192,.92);color:#fff;font-size:14px;pointer-events:none}
+#btnText[aria-pressed="true"],#btnWarn[aria-pressed="true"]{text-decoration:line-through}
+#rulerHint{position:absolute;left:8px;bottom:8px;max-width:calc(100% - 220px);padding:6px 10px;border-radius:8px;background:rgba(21,101,192,.92);color:#fff;font-size:14px;pointer-events:none}
 
 /* パネル(スマホ=ボトムシート / PC=サイドパネル) */
 #panel{flex:none;display:none;flex-direction:column;background:#fff;border-top:1px solid var(--line);max-height:40vh;max-height:40dvh;min-height:0}
@@ -89,6 +90,8 @@ h3:first-child{margin-top:0}
 .list button.item{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;text-align:left}
 .list button.item+button.item{margin-top:8px}
 .chip{flex:none;width:16px;height:16px;border-radius:4px;border:1px solid #888}
+.chip.round{border-radius:50%}
+.addrow .btn{padding:0 4px;font-size:15px}
 .ico{flex:none;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:700;font-size:14px;text-align:center;line-height:22px}
 .ico.red{background:var(--red)}
 .ico.yel{background:var(--yel);border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);line-height:28px}
@@ -102,7 +105,38 @@ fieldset{border:0;padding:0;margin:0;min-width:0}
 #toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:90%;padding:10px 16px;border-radius:8px;background:rgba(32,33,36,.92);color:#fff;font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10}
 #toast.show{opacity:1}
 
+/* 追加ダイアログ */
+.seg{display:flex;border:1px solid #b7bcc4;border-radius:8px;overflow:hidden}
+.seg button{flex:1;min-height:44px;border:0;border-right:1px solid #b7bcc4;background:#fff;font-weight:600;padding:0 6px}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--blue);color:#fff}
+.seg button[disabled]{opacity:.4;cursor:default}
+.preview{display:flex;justify-content:center;padding:6px;border-radius:8px;background:var(--bg)}
+#dlg{position:fixed;inset:0;z-index:20;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.4)}
+#dlg.show{display:flex}
+#dlgCard{width:100%;max-width:480px;max-height:92vh;max-height:92dvh;overflow:auto;padding:16px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;background:#fff}
+
+/* 印刷: 画面の操作部品を隠し、#printArea だけを出す */
+#printArea{display:none}
+@media print{
+  html,body{height:auto;overflow:visible;background:#fff}
+  #app,#toast,#dlg{display:none!important}
+  #printArea{display:block;color:#000;font-size:11pt;line-height:1.4}
+  #printArea,#printArea *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #printArea h1{margin:0 0 2pt;font-size:16pt}
+  #printArea h2{margin:12pt 0 4pt;font-size:12pt;break-after:avoid}
+  #printArea .meta{margin:0 0 6pt;font-size:10pt;color:#444}
+  #printArea .pplan svg{display:block;width:100%;height:auto;border:1px solid #999}
+  #printArea table{width:100%;border-collapse:collapse;font-size:10pt}
+  #printArea th,#printArea td{padding:2pt 5pt;border:1px solid #999;text-align:left}
+  #printArea th{background:#eee}
+  #printArea tr{break-inside:avoid}
+  #printArea ul{margin:0;padding-left:1.2em}
+}
+
 @media (min-width:768px){
+  #dlg{align-items:center}
+  #dlgCard{border-radius:16px}
   #main{flex-direction:row}
   #panel{display:flex;width:360px;max-height:none!important;border-top:0;border-left:1px solid var(--line)}
   #closeSheet{display:none}
@@ -125,9 +159,14 @@ fieldset{border:0;padding:0;margin:0;min-width:0}
         <div class="fabrow">
           <button class="fabbtn" data-act="zoomOut" aria-label="縮小">−</button>
           <button class="fabbtn" data-act="zoomIn" aria-label="拡大">＋</button>
+          <button class="fabbtn" data-act="fit" aria-label="全体表示" title="全体表示">⤢</button>
         </div>
-        <button class="fabbtn" id="btnRuler" data-act="ruler" aria-pressed="false">📏 物差し</button>
-        <button class="fabbtn" data-act="fit">全体表示</button>
+        <div class="fabrow">
+          <button class="fabbtn" id="btnRuler" data-act="ruler" aria-pressed="false" aria-label="物差し" title="物差し(距離を表示)">📏</button>
+          <button class="fabbtn" id="btnText" data-act="toggleText" aria-pressed="false" aria-label="文字を隠す" title="文字を隠す(一覧表示用)">Aa</button>
+          <button class="fabbtn" id="btnWarn" data-act="toggleWarn" aria-pressed="false" aria-label="警告を隠す" title="警告を隠す">⚠</button>
+          <button class="fabbtn" data-act="print" aria-label="印刷" title="印刷">🖨</button>
+        </div>
       </div>
     </div>
     <aside id="panel" aria-label="編集パネル">
@@ -136,11 +175,14 @@ fieldset{border:0;padding:0;margin:0;min-width:0}
     </aside>
   </div>
   <footer id="bottom">
-    <button class="btn" id="btnAdd" data-act="addFurn">＋ 家具追加</button>
+    <button class="btn" id="btnAdd" data-act="addDlg" data-type="furn" data-shape="rect">＋ 追加</button>
     <button class="btn" id="btnMode" data-act="toggleMode"></button>
     <button class="btn" data-act="openShare">共有</button>
   </footer>
 </div>
+<div id="dlg" role="dialog" aria-modal="true" aria-label="家具・小物の追加"><div id="dlgCard"></div></div>
+<div id="printArea" aria-hidden="true"></div>
+<style id="pageStyle"></style>
 <div id="toast" role="status"></div>
 <input type="file" id="fileIn" accept=".json,application/json" hidden>
 
@@ -160,6 +202,11 @@ const WALL_T = 10;        // 描画上の壁の厚み
 const RED = '#d32f2f', YEL = '#e69500', BLUE = '#1565c0';
 const WALLS = ['top', 'right', 'bottom', 'left'];
 const WALL_LABEL = { top: '上', right: '右', bottom: '下', left: '左' };
+const ROUND_N = 48;       // 円・楕円を多角形で近似するときの頂点数(重なり判定用)
+const SHAPES = ['rect', 'circle', 'ellipse'];
+const SHAPE_LABEL = { rect: '四角形', circle: '円', ellipse: '楕円' };
+const SHAPE_OPTS = SHAPES.map((k) => [k, SHAPE_LABEL[k]]);
+const PREF_KEY = 'furniture-checker.prefs.v1';
 
 const LIM = {
   'room.width': [50, 3000], 'room.depth': [50, 3000],
@@ -185,6 +232,79 @@ function inter(a, b) {
   const x1 = Math.min(a.x1, b.x1), y1 = Math.min(a.y1, b.y1);
   return x1 - x0 > EPS && y1 - y0 > EPS ? box(x0, y0, x1 - x0, y1 - y0) : null;
 }
+
+/* ---- 円・楕円を含む図形の判定(凸多角形どうしのクリッピング) ---- */
+/** o は box() に round フラグが付いたもの。円・楕円は多角形で近似する */
+function polyOf(o) {
+  if (!o.round) return [{ x: o.x0, y: o.y0 }, { x: o.x1, y: o.y0 }, { x: o.x1, y: o.y1 }, { x: o.x0, y: o.y1 }];
+  const cx = (o.x0 + o.x1) / 2, cy = (o.y0 + o.y1) / 2, a = o.w / 2, b = o.d / 2, p = [];
+  for (let k = 0; k < ROUND_N; k++) {
+    const t = 2 * Math.PI * k / ROUND_N;
+    p.push({ x: cx + a * Math.cos(t), y: cy + b * Math.sin(t) });
+  }
+  return p;
+}
+function polyArea(p) {
+  let s = 0;
+  for (let i = 0; i < p.length; i++) { const q = p[(i + 1) % p.length]; s += p[i].x * q.y - q.x * p[i].y; }
+  return s / 2;
+}
+/** subj を凸多角形 clip で切り抜く(Sutherland–Hodgman) */
+function clipPoly(subj, clip) {
+  const sg = Math.sign(polyArea(clip)) || 1;
+  let out = subj;
+  for (let i = 0; i < clip.length && out.length; i++) {
+    const a = clip[i], b = clip[(i + 1) % clip.length];
+    const side = (p) => sg * ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x));
+    const inp = out;
+    out = [];
+    for (let j = 0; j < inp.length; j++) {
+      const cur = inp[j], prev = inp[(j + inp.length - 1) % inp.length];
+      const dc = side(cur), dp = side(prev);
+      if (dc >= 0) {
+        if (dp < 0) { const t = dp / (dp - dc); out.push({ x: prev.x + (cur.x - prev.x) * t, y: prev.y + (cur.y - prev.y) * t }); }
+        out.push(cur);
+      } else if (dp >= 0) {
+        const t = dp / (dp - dc);
+        out.push({ x: prev.x + (cur.x - prev.x) * t, y: prev.y + (cur.y - prev.y) * t });
+      }
+    }
+  }
+  return out;
+}
+function polyBox(p) {
+  const xs = p.map((q) => q.x), ys = p.map((q) => q.y);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys);
+  return box(x0, y0, Math.max(...xs) - x0, Math.max(...ys) - y0);
+}
+/** 2つの図形(四角形 or 円・楕円)が重なっていれば { rect, poly } を返す。poly は円・楕円がからむときだけ */
+function shapeInter(a, b) {
+  const c = inter(a, b);
+  if (!c) return null;
+  if (!a.round && !b.round) return { rect: c, poly: null };
+  const p = clipPoly(polyOf(a), polyOf(b));
+  if (p.length < 3 || Math.abs(polyArea(p)) < 0.05) return null;
+  return { rect: polyBox(p), poly: p };
+}
+const hitShape = (c) => (c.poly ? { poly: c.poly } : c.rect);
+/** 描画用: 図形そのものの輪郭(円・楕円なら多角形) */
+const outline = (o) => (o.round ? { poly: polyOf(o) } : o);
+/** 点が図形の内側か(tol は許容誤差 cm) */
+function pointIn(o, px, py, tol = 0) {
+  if (!o.round) return px >= o.x0 - tol && px <= o.x1 + tol && py >= o.y0 - tol && py <= o.y1 + tol;
+  const a = o.w / 2 + tol, b = o.d / 2 + tol;
+  return ((px - (o.x0 + o.x1) / 2) / a) ** 2 + ((py - (o.y0 + o.y1) / 2) / b) ** 2 <= 1 + EPS;
+}
+/** 図形の外周上の代表点(はみ出し判定用) */
+function edgePts(o) {
+  const cx = (o.x0 + o.x1) / 2, cy = (o.y0 + o.y1) / 2, a = o.w / 2, b = o.d / 2, p = [];
+  if (!o.round) {
+    for (const x of [o.x0, cx, o.x1]) for (const y of [o.y0, cy, o.y1]) if (x !== cx || y !== cy) p.push({ x, y });
+    return p;
+  }
+  for (let k = 0; k < 16; k++) { const t = Math.PI * k / 8; p.push({ x: cx + a * Math.cos(t), y: cy + b * Math.sin(t) }); }
+  return p;
+}
 const textW = (s, px) => [...s].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? px : px * 0.58), 0);
 function fitText(s, maxW, px) {
   if (textW(s, px) <= maxW) return s;
@@ -209,8 +329,15 @@ function sampleData() {
       doors: [{ id: 'd1', wall: 'bottom', offset: 20, width: 80, type: 'swing', hinge: 'left', opens: 'in' }],
       windows: [{ id: 'w1', wall: 'top', offset: 100, width: 160, sill: 90 }],
       furniture: [
-        { id: 'k1', name: 'ベッド', x: 0, y: 60, w: 100, d: 200, h: 40, rot: 0, front: 0, color: '#8fb3d9' },
-        { id: 'k2', name: '机', x: 200, y: 0, w: 120, d: 60, h: 72, rot: 0, front: 60, color: '#e0c28f' },
+        { id: 'k1', name: 'ベッド', x: 0, y: 60, w: 100, d: 200, h: 40, rot: 0, front: 0, color: '#8fb3d9', shape: 'rect' },
+        { id: 'k2', name: '机', x: 200, y: 0, w: 120, d: 60, h: 72, rot: 0, front: 60, color: '#e0c28f', shape: 'rect' },
+        { id: 'k3', name: '丸テーブル', x: 230, y: 130, w: 70, d: 70, h: 60, rot: 0, front: 0, color: '#a8d5a2', shape: 'circle' },
+      ],
+      // 小物の x,y は「載せる家具(on)の左上」からの相対位置(cm)
+      items: [
+        { id: 'i1', name: 'ランプ', on: 'k2', x: 10, y: 10, w: 20, d: 20, h: 30, rot: 0, color: '#f2d388', shape: 'circle' },
+        { id: 'i2', name: 'PC', on: 'k2', x: 78, y: 15, w: 38, d: 28, h: 3, rot: 0, color: '#c3b1e1', shape: 'rect' },
+        { id: 'i3', name: '花瓶', on: 'k3', x: 44, y: 38, w: 16, d: 16, h: 25, rot: 0, color: '#e5a6a6', shape: 'circle' },
       ],
     }],
   };
@@ -218,12 +345,12 @@ function sampleData() {
 function emptyData(settings) {
   return {
     version: 1, settings: { ...(settings || DEFAULT_SETTINGS) },
-    rooms: [{ id: 'r1', name: '新しい部屋', width: 360, depth: 270, fixtures: [], doors: [], windows: [], furniture: [] }],
+    rooms: [{ id: 'r1', name: '新しい部屋', width: 360, depth: 270, fixtures: [], doors: [], windows: [], furniture: [], items: [] }],
   };
 }
 
-function uniqIds(arr, prefix) {
-  const used = new Set();
+function uniqIds(arr, prefix, taken) {
+  const used = new Set(taken || []);
   let n = 1;
   for (const o of arr) {
     if (!o.id || used.has(o.id)) {
@@ -232,6 +359,13 @@ function uniqIds(arr, prefix) {
     }
     used.add(o.id);
   }
+}
+
+/** 形(shape)を補う。旧データは形の指定がないので四角形。円は縦=横にそろえる */
+function withShape(o, shape) {
+  o.shape = SHAPES.includes(shape) ? shape : 'rect';
+  if (o.shape === 'circle') o.d = o.w;
+  return o;
 }
 
 /** 外部から来たデータ(JSON・URL・localStorage)を検証して正規化する。不正なら例外 */
@@ -267,16 +401,27 @@ function normalize(d) {
         offset: num(o && o.offset, 0, ...LIM.offset), width: num(o && o.width, 100, ...LIM['windows.width']),
         sill: num(o && o.sill, 90, ...LIM.sill),
       })),
-      furniture: (Array.isArray(r.furniture) ? r.furniture : []).map((o) => ({
+      furniture: (Array.isArray(r.furniture) ? r.furniture : []).map((o) => withShape({
         id: str(o && o.id, ''), name: str(o && o.name, '家具'),
         x: num(o && o.x, 0, ...LIM.x), y: num(o && o.y, 0, ...LIM.y),
         w: num(o && o.w, 60, ...LIM.w), d: num(o && o.d, 60, ...LIM.d), h: num(o && o.h, 60, ...LIM.h),
         rot: [0, 90, 180, 270].includes(Number(o && o.rot)) ? Number(o.rot) : 0,
         front: num(o && o.front, 0, ...LIM.front),
         color: /^#[0-9a-fA-F]{6}$/.test(o && o.color) ? o.color : '#8fb3d9',
-      })),
+      }, o && o.shape)),
+      items: (Array.isArray(r.items) ? r.items : []).map((o) => withShape({
+        id: str(o && o.id, ''), name: str(o && o.name, '小物'), on: str(o && o.on, ''),
+        x: num(o && o.x, 0, ...LIM.x), y: num(o && o.y, 0, ...LIM.y),
+        w: num(o && o.w, 20, ...LIM.w), d: num(o && o.d, 20, ...LIM.d), h: num(o && o.h, 10, ...LIM.h),
+        rot: [0, 90, 180, 270].includes(Number(o && o.rot)) ? Number(o.rot) : 0,
+        color: /^#[0-9a-fA-F]{6}$/.test(o && o.color) ? o.color : '#f2a65a',
+      }, o && o.shape)),
     };
     uniqIds(room.fixtures, 'f'); uniqIds(room.doors, 'd'); uniqIds(room.windows, 'w'); uniqIds(room.furniture, 'k');
+    uniqIds(room.items, 'i', room.furniture.map((f) => f.id));
+    // 載せる家具が見つからない小物は表示できないため取り除く
+    const fids = new Set(room.furniture.map((f) => f.id));
+    room.items = room.items.filter((it) => fids.has(it.on));
     return room;
   });
   return { version: 1, settings, rooms };
@@ -289,22 +434,36 @@ const state = {
   data: null, mode: 'edit', locked: false,
   selId: null, tab: 'furn', sheet: false,
   warns: [], levels: {}, focusKey: null,
-  dragging: false, fitMode: true, ruler: false,
+  dragging: false, fitMode: true, ruler: false, hideText: false, hideWarn: false,
 };
 const view = { s: 1, tx: 0, ty: 0, w: 0, h: 0 };
 const room = () => state.data.rooms[0];
 const findF = (id) => room().furniture.find((f) => f.id === id);
-const selFurn = () => (state.selId ? findF(state.selId) : null);
+const findI = (id) => room().items.find((f) => f.id === id);
+const findAny = (id) => findF(id) || findI(id);
+const isItem = (o) => !!o && typeof o.on === 'string';
+const selObj = () => (state.selId ? findAny(state.selId) : null);
+const selFurn = () => { const o = selObj(); return o && !isItem(o) ? o : null; };
+const selItem = () => { const o = selObj(); return isItem(o) ? o : null; };
+const itemsOn = (fid) => room().items.filter((i) => i.on === fid);
+const round1 = (v) => Math.round(v * 10) / 10;
 
 const app = $('#app'), stage = $('#stage'), panelBody = $('#panelBody'), tabsEl = $('#tabs');
 
 /* =====================================================================
  * 幾何
  * ===================================================================== */
+const isRound = (o) => o.shape === 'circle' || o.shape === 'ellipse';
 function fRect(f) {
   const sw = f.rot === 90 || f.rot === 270;
-  return box(f.x, f.y, sw ? f.d : f.w, sw ? f.w : f.d);
+  return { ...box(f.x, f.y, sw ? f.d : f.w, sw ? f.w : f.d), round: isRound(f) };
 }
+/** 小物の長方形(部屋の座標)。小物の x,y は載せる家具の左上からの相対位置なので、家具に足して求める */
+function iRect(it, r = room()) {
+  const b = r.furniture.find((f) => f.id === it.on), sw = it.rot === 90 || it.rot === 270;
+  return { ...box((b ? b.x : 0) + it.x, (b ? b.y : 0) + it.y, sw ? it.d : it.w, sw ? it.w : it.d), round: isRound(it) };
+}
+const objRect = (o) => (isItem(o) ? iRect(o) : fRect(o));
 /** 前方スペースの長方形。rot=0 で下向き、90 で左、180 で上、270 で右(時計回りに回る) */
 function frontRect(f) {
   if (!(f.front > 0)) return null;
@@ -353,6 +512,21 @@ function sectorHitsRect(g, rc) {
   const a0 = Math.min(p[0], q[0]), a1 = Math.max(p[0], q[0]), b0 = Math.min(p[1], q[1]), b1 = Math.max(p[1], q[1]);
   if (a1 <= EPS || b1 <= EPS) return false;
   return Math.hypot(Math.max(a0, 0), Math.max(b0, 0)) < g.r - EPS;
+}
+/** 開閉範囲(1/4円)を多角形にしたもの。円・楕円との判定用 */
+function sectorPoly(g) {
+  const p = [g.hinge], N = 24;
+  for (let k = 0; k <= N; k++) {
+    const t = (Math.PI / 2) * k / N, c = Math.cos(t) * g.r, s = Math.sin(t) * g.r;
+    p.push({ x: g.hinge.x + g.u.x * c + g.n.x * s, y: g.hinge.y + g.u.y * c + g.n.y * s });
+  }
+  return p;
+}
+/** 開閉範囲と図形(四角形 or 円・楕円)が重なるか */
+function sectorHits(g, o) {
+  if (!o.round) return sectorHitsRect(g, o);
+  const p = clipPoly(polyOf(o), sectorPoly(g));
+  return p.length >= 3 && Math.abs(polyArea(p)) >= 0.05;
 }
 function windowZone(r, w) {
   switch (w.wall) {
@@ -416,23 +590,23 @@ function computeWarnings() {
   // 重なり: 家具どうし
   for (let i = 0; i < F.length; i++) {
     for (let j = i + 1; j < F.length; j++) {
-      const c = inter(F[i].r, F[j].r);
-      if (c) add({ level: 'red', kind: 'overlap', ids: [F[i].f.id, F[j].f.id], rect: c, shapes: [c], text: `${F[i].f.name}と${F[j].f.name}が重なっています` });
+      const c = shapeInter(F[i].r, F[j].r);
+      if (c) add({ level: 'red', kind: 'overlap', ids: [F[i].f.id, F[j].f.id], rect: c.rect, shapes: [hitShape(c)], text: `${F[i].f.name}と${F[j].f.name}が重なっています` });
     }
   }
   // 重なり: 家具と固定物
   for (const a of F) for (const b of FX) {
-    const c = inter(a.r, b.r);
-    if (c) add({ level: 'red', kind: 'overlap', ids: [a.f.id], rect: c, shapes: [c], text: `${a.f.name}が${b.x.name}と重なっています` });
+    const c = shapeInter(a.r, b.r);
+    if (c) add({ level: 'red', kind: 'overlap', ids: [a.f.id], rect: c.rect, shapes: [hitShape(c)], text: `${a.f.name}が${b.x.name}と重なっています` });
   }
   // ドア開閉範囲
   for (const s of swings) {
     const bb = sectorBBox(s.g), label = `ドア${s.i + 1}(${WALL_LABEL[s.dr.wall]}の壁)`;
     const shape = { sector: s.g };
-    for (const a of F) if (sectorHitsRect(s.g, a.r)) {
+    for (const a of F) if (sectorHits(s.g, a.r)) {
       add({ level: 'red', kind: 'door', ids: [a.f.id], rect: bb, shapes: [shape], text: `${label}の開閉範囲に${a.f.name}がかかっています` });
     }
-    for (const b of FX) if (sectorHitsRect(s.g, b.r)) {
+    for (const b of FX) if (sectorHits(s.g, b.r)) {
       add({ level: 'red', kind: 'door', ids: [], rect: bb, shapes: [shape], text: `${label}の開閉範囲に${b.x.name}がかかっています` });
     }
   }
@@ -441,7 +615,7 @@ function computeWarnings() {
     const fr = frontRect(a.f);
     if (!fr) continue;
     const causes = [];
-    for (const b of F) if (b.f !== a.f && inter(fr, b.r)) causes.push(b.f.name);
+    for (const b of F) if (b.f !== a.f && shapeInter(fr, b.r)) causes.push(b.f.name);
     for (const b of FX) if (inter(fr, b.r)) causes.push(b.x.name);
     for (const s of swings) if (sectorHitsRect(s.g, fr)) causes.push(`ドア${s.i + 1}の開閉範囲`);
     if (fr.x0 < -EPS || fr.y0 < -EPS || fr.x1 > W + EPS || fr.y1 > D + EPS) causes.push('壁');
@@ -454,15 +628,50 @@ function computeWarnings() {
     const zone = windowZone(r, w);
     for (const a of F) {
       if (!(a.f.h > w.sill)) continue;
-      const c = inter(zone, a.r);
-      if (c) add({ level: 'yellow', kind: 'window', ids: [a.f.id], rect: c, shapes: [c], text: `${a.f.name}(高さ${fmt(a.f.h)}cm)が窓${i + 1}の前をふさいでいます(窓の下端 ${fmt(w.sill)}cm)` });
+      const c = shapeInter(zone, a.r);
+      if (c) add({ level: 'yellow', kind: 'window', ids: [a.f.id], rect: c.rect, shapes: [hitShape(c)], text: `${a.f.name}(高さ${fmt(a.f.h)}cm)が窓${i + 1}の前をふさいでいます(窓の下端 ${fmt(w.sill)}cm)` });
+    }
+    // 家具だけなら窓の下端より低いが、小物を載せると超える場合
+    for (const it of r.items) {
+      const base = r.furniture.find((f) => f.id === it.on);
+      if (!base || base.h > w.sill || !(base.h + it.h > w.sill)) continue;
+      const c = shapeInter(zone, iRect(it, r));
+      if (c) add({ level: 'yellow', kind: 'window', ids: [it.id], rect: c.rect, shapes: [hitShape(c)], text: `${it.name}(${base.name}の上・床から${fmt(base.h + it.h)}cm)が窓${i + 1}の前をふさいでいます(窓の下端 ${fmt(w.sill)}cm)` });
     }
   });
+  // 小物: 載せている家具からはみ出していないか
+  for (const it of r.items) {
+    const base = r.furniture.find((f) => f.id === it.on);
+    if (!base) continue;
+    const ir = iRect(it, r), br = fRect(base);
+    if (edgePts(ir).some((p) => !pointIn(br, p.x, p.y, 0.5))) {
+      add({ level: 'yellow', kind: 'item', ids: [it.id], rect: ir, shapes: [outline(ir)], text: `${it.name}が${base.name}からはみ出しています(落ちそうです)` });
+    }
+  }
   // 通路幅
   aisleWarnings(r, S, out, add);
 
   out.sort((a, b) => (a.level === b.level ? 0 : a.level === 'red' ? -1 : 1));
   return out;
+}
+
+/** 図形 o の axis 方向の端(side:'lo'=小さい側 / 'hi'=大きい側)の座標。t は垂直方向の位置。円・楕円は t によって端が変わる */
+function edge(o, axis, side, t) {
+  const [a0, a1, b0, b1] = axis === 'x' ? ['x0', 'x1', 'y0', 'y1'] : ['y0', 'y1', 'x0', 'x1'];
+  if (!o.round) return side === 'hi' ? o[a1] : o[a0];
+  const ca = (o[a0] + o[a1]) / 2, ha = (o[a1] - o[a0]) / 2, cb = (o[b0] + o[b1]) / 2, hb = (o[b1] - o[b0]) / 2;
+  const k = Math.sqrt(Math.max(0, 1 - ((t - cb) / hb) ** 2));
+  return side === 'hi' ? ca + ha * k : ca - ha * k;
+}
+/** A の「大きい側の端」と B の「小さい側の端」が [i0,i1] の範囲でいちばん狭まる所 */
+function narrowest(A, B, axis, i0, i1) {
+  let best = { gap: Infinity, at: (i0 + i1) / 2 };
+  const N = 24;
+  for (let k = 0; k <= N; k++) {
+    const t = i0 + (i1 - i0) * k / N, g = edge(B, axis, 'lo', t) - edge(A, axis, 'hi', t);
+    if (g < best.gap) best = { gap: g, at: t };
+  }
+  return best;
 }
 
 function aisleWarnings(r, S, out, add) {
@@ -472,8 +681,10 @@ function aisleWarnings(r, S, out, add) {
     const [a0, a1, b0, b1] = axis === 'x' ? ['x0', 'x1', 'y0', 'y1'] : ['y0', 'y1', 'x0', 'x1'];
     for (const A of all) for (const B of all) {
       if (A === B || (A.kind === 'wall' && B.kind === 'wall')) continue;
-      const gap = B[a0] - A[a1];
-      if (!(gap > S.gapIgnore + EPS && gap < S.aisleMin - EPS)) continue;
+      const round = !!(A.round || B.round);
+      let gap = B[a0] - A[a1];
+      // 円・楕円は外接する四角形より実際のすき間が広いので、ここでは粗く絞り、あとで正確に測る
+      if (round ? !(gap < S.aisleMin - EPS) : !(gap > S.gapIgnore + EPS && gap < S.aisleMin - EPS)) continue;
       const lo = Math.max(A[b0], B[b0]), hi = Math.min(A[b1], B[b1]);
       if (hi - lo < MIN_FACE) continue;
       let ivs = [[lo, hi]];
@@ -490,7 +701,13 @@ function aisleWarnings(r, S, out, add) {
       }
       for (const [i0, i1] of ivs) {
         if (i1 - i0 < MIN_FACE) continue;
-        const rc = axis === 'x' ? box(A.x1, i0, gap, i1 - i0) : box(i0, A.y1, i1 - i0, gap);
+        let rc;
+        if (round) {
+          const nr = narrowest(A, B, axis, i0, i1), th = Math.min(i1 - i0, 16), s0 = edge(A, axis, 'hi', nr.at);
+          gap = nr.gap;
+          if (!(gap > S.gapIgnore + EPS && gap < S.aisleMin - EPS)) continue;
+          rc = axis === 'x' ? box(s0, nr.at - th / 2, gap, th) : box(nr.at - th / 2, s0, th, gap);
+        } else rc = axis === 'x' ? box(A.x1, i0, gap, i1 - i0) : box(i0, A.y1, i1 - i0, gap);
         const red = gap < S.aisleTight - EPS;
         const ids = [A, B].filter((o) => o.kind === 'furn').map((o) => o.id);
         add({
@@ -565,12 +782,21 @@ function neighborLines(f) {
   return res;
 }
 
-function draw() {
+function draw() { stage.innerHTML = planMarkup({}); }
+
+/** 配置図の中身(<defs>と<g>)。画面表示と印刷で共用する。印刷時は view を差し替えてから呼ぶ */
+function planMarkup(o) {
   const r = room(), s = view.s, inv = 1 / s, W = r.width, D = r.depth;
-  const hatch = (id, col, bg) => `<pattern id="${id}" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="scale(${inv}) rotate(45)"><rect width="8" height="8" fill="${bg}"/><line x1="0" y1="0" x2="0" y2="8" stroke="${col}" stroke-width="3"/></pattern>`;
+  const pr = !!o.print, P = o.idp || '', txt = !state.hideText, showW = !state.hideWarn;
+  const hatch = (id, col, bg) => `<pattern id="${P}${id}" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="scale(${inv}) rotate(45)"><rect width="8" height="8" fill="${bg}"/><line x1="0" y1="0" x2="0" y2="8" stroke="${col}" stroke-width="3"/></pattern>`;
   let h = `<defs>${hatch('hR', RED, 'rgba(211,47,47,.2)')}${hatch('hY', YEL, 'rgba(230,149,0,.22)')}${hatch('hF', '#8a8f98', '#cfd3d9')}</defs>`;
   h += `<g transform="translate(${view.tx} ${view.ty}) scale(${s})">`;
   const ns = 'vector-effect="non-scaling-stroke"';
+  /** 四角形なら rect、円・楕円なら ellipse を返す */
+  const shape = (R, attrs) => (R.round
+    ? `<ellipse cx="${R.x0 + R.w / 2}" cy="${R.y0 + R.d / 2}" rx="${R.w / 2}" ry="${R.d / 2}" ${attrs}/>`
+    : `<rect x="${R.x0}" y="${R.y0}" width="${R.w}" height="${R.d}" ${attrs}/>`);
+  const dimText = (obj, R) => (obj.shape === 'circle' ? `φ${fmt(R.w)}` : `${fmt(R.w)}×${fmt(R.d)}`);
 
   // 床・目盛り
   h += `<rect x="0" y="0" width="${W}" height="${D}" fill="#fff"/>`;
@@ -603,62 +829,88 @@ function draw() {
   }
   // 固定物
   for (const x of r.fixtures) {
-    h += `<rect x="${x.x}" y="${x.y}" width="${x.w}" height="${x.d}" fill="url(#hF)" stroke="#6b7078" stroke-width="1.5" ${ns}/>`;
+    h += `<rect x="${x.x}" y="${x.y}" width="${x.w}" height="${x.d}" fill="url(#${P}hF)" stroke="#6b7078" stroke-width="1.5" ${ns}/>`;
     const nm = fitText(x.name, x.w * s - 4, 11);
-    if (x.d * s >= 14 && nm) h += T(x.x + x.w / 2, x.y + x.d / 2, nm, { px: 11, fill: '#333' });
+    if (txt && x.d * s >= 14 && nm) h += T(x.x + x.w / 2, x.y + x.d / 2, nm, { px: 11, fill: '#333' });
   }
   // 前方スペース
   for (const f of r.furniture) {
     const fr = frontRect(f);
     if (fr) h += `<rect x="${fr.x}" y="${fr.y}" width="${fr.w}" height="${fr.d}" fill="${f.color}" fill-opacity=".28" stroke="${f.color}" stroke-width="1.2" stroke-dasharray="4 3" ${ns}/>`;
   }
+  const lvColor = (lv) => (lv === 'red' ? RED : lv === 'yellow' ? YEL : null);
+  /** 選択中でラベルが図形内に収まらないときは、図形の上に名前を出す */
+  const tag = (R, name) => T(R.x0 + R.w / 2, R.y0 - 11 * inv, name, { px: 12, bold: true, fill: BLUE });
+
   // 家具(選択中を最前面)
   const sorted = r.furniture.slice().sort((a, b) => (a.id === state.selId) - (b.id === state.selId));
   for (const f of sorted) {
-    const R = fRect(f), lv = state.levels[f.id];
-    const stroke = lv === 'red' ? RED : lv === 'yellow' ? YEL : '#4a4f57';
+    const R = fRect(f), lv = showW ? state.levels[f.id] : undefined;
     const pw = R.w * s, ph = R.d * s, small = Math.min(pw, ph) < 24;
-    h += `<g class="furn" data-furn="${esc(f.id)}"><rect x="${R.x}" y="${R.y}" width="${R.w}" height="${R.d}" fill="${f.color}" fill-opacity=".9" stroke="${stroke}" stroke-width="${lv ? 3 : 1.5}" ${ns}/>`;
+    h += `<g class="furn" data-furn="${esc(f.id)}">${shape(R, `fill="${f.color}" fill-opacity=".9" stroke="${lvColor(lv) || '#4a4f57'}" stroke-width="${lv ? 3 : 1.5}" ${ns}`)}`;
     if (!small) {
       // 前方向のしるし
       const mid = [{ x: R.x0 + R.w / 2, y: R.y1 }, { x: R.x0, y: R.y0 + R.d / 2 }, { x: R.x0 + R.w / 2, y: R.y0 }, { x: R.x1, y: R.y0 + R.d / 2 }][[0, 90, 180, 270].indexOf(f.rot)];
       h += `<g transform="translate(${mid.x} ${mid.y}) scale(${inv}) rotate(${f.rot})"><path d="M-5 -8L5 -8L0 -1Z" fill="#333" fill-opacity=".7"/></g>`;
     }
-    const nm = fitText(f.name, pw - 8, 12);
-    if (nm && ph >= 16 && pw >= 16) {
-      const dims = `${fmt(R.w)}×${fmt(R.d)}`;
-      const showDims = ph >= 38 && textW(dims, 11) <= pw - 8;
-      h += T(R.x0 + R.w / 2, R.y0 + R.d / 2 - (showDims ? 7 : 0) * inv, nm, { px: 12, bold: true });
-      if (showDims) h += T(R.x0 + R.w / 2, R.y0 + R.d / 2 + 8 * inv, dims, { px: 11, fill: '#333' });
+    const sel = !pr && f.id === state.selId, k = R.round ? 0.72 : 1;   // 円・楕円は文字を置ける範囲が狭い
+    if (txt || sel) {
+      const nm = fitText(f.name, pw * k - 8, 12);
+      if (nm && ph * k >= 16 && pw * k >= 16) {
+        const dims = dimText(f, R);
+        const showDims = ph * k >= 38 && textW(dims, 11) <= pw * k - 8;
+        h += T(R.x0 + R.w / 2, R.y0 + R.d / 2 - (showDims ? 7 : 0) * inv, nm, { px: 12, bold: true });
+        if (showDims) h += T(R.x0 + R.w / 2, R.y0 + R.d / 2 + 8 * inv, dims, { px: 11, fill: '#333' });
+      } else if (sel) h += tag(R, f.name);
     }
-    if (lv && !small) h += badgeIcon(R.x0 + 12 * inv, R.y0 + 12 * inv, lv);
+    if (lv && !small) {
+      const bx = R.round ? R.x0 + R.w * 0.5 - R.w * 0.27 : R.x0 + 12 * inv, by = R.round ? R.y0 + R.d * 0.5 - R.d * 0.27 : R.y0 + 12 * inv;
+      h += badgeIcon(bx, by, lv);
+    }
+    h += '</g>';
+  }
+  // 小物(家具の上に重ねて表示)
+  const sortedI = r.items.slice().sort((a, b) => (a.id === state.selId) - (b.id === state.selId));
+  for (const it of sortedI) {
+    const R = iRect(it, r), lv = showW ? state.levels[it.id] : undefined;
+    const pw = R.w * s, ph = R.d * s, cx = R.x0 + R.w / 2, cy = R.y0 + R.d / 2;
+    const hw = Math.max(R.w, 30 * inv), hd = Math.max(R.d, 30 * inv);   // 小さい小物も指でつかめるよう、見えない当たり判定を広げる
+    h += `<g class="itm" data-item="${esc(it.id)}"><rect x="${cx - hw / 2}" y="${cy - hd / 2}" width="${hw}" height="${hd}" fill="transparent"/>`;
+    h += shape(R, `fill="${it.color}" fill-opacity=".96" stroke="${lvColor(lv) || '#5b4a2e'}" stroke-width="${lv ? 3 : 1.5}" ${ns}`);
+    const sel = !pr && it.id === state.selId, k = R.round ? 0.72 : 1;
+    if (txt || sel) {
+      const nm = fitText(it.name, pw * k - 4, 11);
+      if (nm && ph * k >= 14 && pw * k >= 14) h += T(cx, cy, nm, { px: 11, bold: true });
+      else if (sel) h += tag(R, it.name);
+    }
     h += '</g>';
   }
   // 警告の重ね表示(斜線)
-  const focus = state.warns.find((w) => w.key === state.focusKey);
-  for (const w of state.warns) {
-    const fill = w.level === 'red' ? 'url(#hR)' : 'url(#hY)', col = w.level === 'red' ? RED : YEL;
+  const focus = pr ? null : state.warns.find((w) => w.key === state.focusKey);
+  const shownWarns = showW ? state.warns : [];
+  for (const w of shownWarns) {
+    const fill = `url(#${P}${w.level === 'red' ? 'hR' : 'hY'})`, col = w.level === 'red' ? RED : YEL;
     for (const sh of w.shapes) {
       if (sh.sector) h += `<path d="${sectorD(sh.sector)}" fill="${fill}" stroke="${col}" stroke-width="2" ${ns}/>`;
+      else if (sh.poly) h += `<path d="M${sh.poly.map((p) => `${p.x} ${p.y}`).join('L')}Z" fill="${fill}" stroke="${col}" stroke-width="2" ${ns}/>`;
       else h += `<rect x="${sh.x}" y="${sh.y}" width="${sh.w}" height="${sh.d}" fill="${fill}" stroke="${col}" stroke-width="${w.kind === 'front' ? 1.5 : 2}" ${ns}/>`;
     }
   }
-  for (const w of state.warns) {
+  for (const w of shownWarns) {
     const col = w.level === 'red' ? RED : YEL, c = w.rect;
-    if (w.kind === 'aisle') h += pill(c.x + c.w / 2, c.y + c.d / 2, `${w.label}cm`, col);
-    else if (w.kind === 'overlap' || w.kind === 'window') h += badgeIcon(c.x + c.w / 2, c.y + c.d / 2, w.level);
+    if (w.kind === 'aisle') h += txt ? pill(c.x + c.w / 2, c.y + c.d / 2, `${w.label}cm`, col) : badgeIcon(c.x + c.w / 2, c.y + c.d / 2, w.level);
     else if (w.kind === 'door') {
       const sh = w.shapes[0].sector;
       h += badgeIcon(sh.hinge.x + (sh.u.x + sh.n.x) * sh.r * 0.55, sh.hinge.y + (sh.u.y + sh.n.y) * sh.r * 0.55, w.level);
-    } else if (w.kind === 'front') h += badgeIcon(c.x + c.w / 2, c.y + c.d / 2, w.level);
+    } else h += badgeIcon(c.x + c.w / 2, c.y + c.d / 2, w.level);
   }
   // 選択中の強調・距離表示
-  const sf = selFurn();
-  if (sf) {
-    const R = fRect(sf);
-    h += `<rect x="${R.x}" y="${R.y}" width="${R.w}" height="${R.d}" fill="none" stroke="${BLUE}" stroke-width="3" stroke-dasharray="7 4" ${ns}/>`;
-    if (state.dragging || state.ruler) {
-      for (const n of neighborLines(sf)) {
+  const so = pr ? null : selObj();
+  if (so) {
+    const R = objRect(so);
+    h += shape(R, `fill="none" stroke="${BLUE}" stroke-width="3" stroke-dasharray="7 4" ${ns}`);
+    if (!isItem(so) && (state.dragging || state.ruler)) {
+      for (const n of neighborLines(so)) {
         const [x1, y1, x2, y2] = n.line;
         if (n.g < 0.05) continue;
         h += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${BLUE}" stroke-width="2" ${ns}/>`;
@@ -671,10 +923,12 @@ function draw() {
     h += `<rect class="pulse" x="${c.x - p}" y="${c.y - p}" width="${c.w + 2 * p}" height="${c.d + 2 * p}" fill="none" stroke="${BLUE}" stroke-width="3" ${ns}/>`;
   }
   // 部屋寸法
-  h += T(W / 2, -WALL_T, `${fmt(W)}cm`, { px: 12, dy: -10, bold: true, fill: '#444' });
-  h += T(-WALL_T, D / 2, `${fmt(D)}cm`, { px: 12, dx: -8, anchor: 'end', bold: true, fill: '#444' });
+  if (txt) {
+    h += T(W / 2, -WALL_T, `${fmt(W)}cm`, { px: 12, dy: -10, bold: true, fill: '#444' });
+    h += T(-WALL_T, D / 2, `${fmt(D)}cm`, { px: 12, dx: -8, anchor: 'end', bold: true, fill: '#444' });
+  }
   h += '</g>';
-  stage.innerHTML = h;
+  return h;
 }
 
 /* =====================================================================
@@ -719,7 +973,7 @@ function zoomToRect(rc) {
   requestRender();
 }
 function ensureVisible(f) {
-  const R = fRect(f), pad = 16;
+  const R = objRect(f), pad = 16;
   const l = R.x0 * view.s + view.tx, t = R.y0 * view.s + view.ty, rr = R.x1 * view.s + view.tx, b = R.y1 * view.s + view.ty;
   if (l >= pad && t >= pad && rr <= view.w - pad && b <= view.h - pad) return;
   view.tx = view.w / 2 - (R.x0 + R.w / 2) * view.s;
@@ -743,12 +997,12 @@ stage.addEventListener('pointerdown', (e) => {
   ptrs.set(e.pointerId, localPt(e));
   if (ptrs.size === 2) { startPinch(); return; }
   if (ptrs.size > 2) return;
-  const hit = e.target.closest && e.target.closest('[data-furn]');
-  const g = { id: hit ? hit.dataset.furn : null, sx: e.clientX, sy: e.clientY, moved: false, tx0: view.tx, ty0: view.ty };
+  const hit = e.target.closest && e.target.closest('[data-furn],[data-item]');
+  const g = { id: hit ? (hit.dataset.furn || hit.dataset.item) : null, sx: e.clientX, sy: e.clientY, moved: false, tx0: view.tx, ty0: view.ty };
   if (g.id) {
-    const f = findF(g.id);
+    const f = findAny(g.id);
     if (!f) return;
-    g.ox = f.x; g.oy = f.y;
+    g.ox = f.x; g.oy = f.y; g.item = isItem(f);   // 小物の x,y は載せる家具からの相対位置
     if (state.mode === 'edit') { g.drag = true; }
     if (state.selId !== g.id) select(g.id, { fromStage: true });
   }
@@ -765,9 +1019,17 @@ stage.addEventListener('pointermove', (e) => {
   if (!g.moved && Math.hypot(dx, dy) < 4) return;
   g.moved = true;
   if (g.drag) {
-    const f = findF(g.id), r = room(), R = fRect(f);
-    f.x = clamp(snapV(g.ox + dx / view.s), -200, r.width + 200 - R.w);
-    f.y = clamp(snapV(g.oy + dy / view.s), -200, r.depth + 200 - R.d);
+    const f = findAny(g.id), r = room();
+    if (g.item) {
+      // 小物は細かく置きたいので 1cm 単位。絶対位置で部屋の外に出すぎないよう制限してから相対位置に戻す
+      const b = r.furniture.find((o) => o.id === f.on), R = iRect(f, r);
+      f.x = clamp(Math.round(g.ox + dx / view.s), -200 - b.x, r.width + 200 - R.w - b.x);
+      f.y = clamp(Math.round(g.oy + dy / view.s), -200 - b.y, r.depth + 200 - R.d - b.y);
+    } else {
+      const R = fRect(f);
+      f.x = clamp(snapV(g.ox + dx / view.s), -200, r.width + 200 - R.w);
+      f.y = clamp(snapV(g.oy + dy / view.s), -200, r.depth + 200 - R.d);
+    }
     state.dragging = true;
     changed({ panel: 'sync' });
   } else {
@@ -786,7 +1048,10 @@ function endPointer(e) {
   if (!g) return;
   state.dragging = false;
   if (!g.moved && !g.id) deselect();
-  if (g.moved && g.drag) changed({ panel: 'sync' });
+  if (g.moved && g.drag) {
+    if (g.item) { dropItem(findI(g.id)); changed({ panel: 'full' }); }
+    else changed({ panel: 'sync' });
+  }
   requestRender();
   syncSize();
 }
@@ -796,7 +1061,7 @@ stage.addEventListener('lostpointercapture', endPointer);
 
 function startPinch() {
   if (gesture && gesture.drag && gesture.moved) {   // ドラッグ途中で2本目の指が触れたら元の位置に戻す
-    const f = findF(gesture.id);
+    const f = findAny(gesture.id);
     if (f) { f.x = gesture.ox; f.y = gesture.oy; }
   }
   gesture = null; state.dragging = false;
@@ -832,7 +1097,7 @@ function select(id, o = {}) {
   updateChrome();
   renderPanel();
   syncSize();
-  if (!o.fromStage) { const f = findF(id); if (f) ensureVisible(f); }
+  if (!o.fromStage) { const f = findAny(id); if (f) ensureVisible(f); }
   requestRender();
 }
 function deselect() {
@@ -855,50 +1120,194 @@ function freeSpot(w, d) {
   }
   return { x: 0, y: 0 };
 }
-function addFurniture() {
-  if (state.mode !== 'edit') return;
-  const r = room(), w = 60, d = 60, p = freeSpot(w, d);
-  const palette = ['#8fb3d9', '#e0c28f', '#a8d5a2', '#e5a6a6', '#c3b1e1', '#f2d388'];
-  const f = { id: nextId(r.furniture, 'k'), name: '家具', x: p.x, y: p.y, w, d, h: 60, rot: 0, front: 0, color: palette[r.furniture.length % palette.length] };
-  r.furniture.push(f);
-  changed({ panel: 'none' });
-  select(f.id);
-  const nameInput = panelBody.querySelector('[data-key="name"]');
-  if (nameInput && matchMedia('(min-width:768px)').matches) { nameInput.focus(); nameInput.select(); }
+const FURN_COLORS = ['#8fb3d9', '#e0c28f', '#a8d5a2', '#e5a6a6', '#c3b1e1', '#f2d388'];
+const ITEM_COLORS = ['#f2a65a', '#9fd3c7', '#f7d6e0', '#d7ccc8', '#b8d8f0', '#e6e08a'];
+
+/** 小物を、その中心がある家具に載せ替える(ドロップ時)。どの家具の上にもなければ今の家具のまま */
+function dropItem(it) {
+  if (!it) return;
+  const r = room(), R = iRect(it, r), cx = R.x0 + R.w / 2, cy = R.y0 + R.d / 2;
+  const cur = r.furniture.find((f) => f.id === it.on);
+  if (cur && pointIn(fRect(cur), cx, cy)) return;
+  const area = (f) => { const q = fRect(f); return q.w * q.d; };
+  const cand = r.furniture.filter((f) => pointIn(fRect(f), cx, cy)).sort((a, b) => area(a) - area(b))[0];
+  if (cand) { it.on = cand.id; it.x = round1(R.x0 - cand.x); it.y = round1(R.y0 - cand.y); }
 }
+/** 載せる家具を変更し、新しい家具の真ん中に置く */
+function moveItemTo(it, fid) {
+  const r = room(), nb = r.furniture.find((f) => f.id === fid);
+  if (!nb) return;
+  const N = fRect(nb), I = iRect({ ...it, on: fid }, r);
+  it.on = fid;
+  it.x = round1((N.w - I.w) / 2); it.y = round1((N.d - I.d) / 2);
+}
+
+/* ---- 追加ダイアログ(家具・小物の形と縦横のcmをここで決める) ---- */
+const dlgEl = $('#dlg'), dlgCard = $('#dlgCard');
+const dlg = { type: 'furn', shape: 'rect', name: '', w: 60, d: 60, h: 60, on: '', nameDirty: false, sizeDirty: false };
+function dlgDefaults() {
+  if (dlg.type === 'item') return { rect: [20, 15, 15], circle: [20, 20, 15], ellipse: [25, 15, 15] }[dlg.shape];
+  return { rect: [60, 60, 60], circle: [90, 90, 70], ellipse: [120, 80, 70] }[dlg.shape];
+}
+const dlgDefaultName = () => (dlg.type === 'item' ? '小物' : { rect: '家具', circle: '丸テーブル', ellipse: '楕円テーブル' }[dlg.shape]);
+function openDlg(type, shape, on) {
+  if (state.mode !== 'edit') return;
+  const r = room();
+  if (type === 'item' && !r.furniture.length) { toast('小物は家具の上に置きます。先に家具を追加してください'); return; }
+  const cur = selObj();
+  Object.assign(dlg, {
+    type, shape: shape || 'rect', nameDirty: false, sizeDirty: false,
+    on: on || (cur ? (isItem(cur) ? cur.on : cur.id) : '') || r.furniture[0].id,
+  });
+  applyDlgDefaults();
+  renderDlg();
+  dlgEl.classList.add('show');
+  const inp = dlgCard.querySelector('#dlgName');
+  if (inp && matchMedia('(min-width:768px)').matches) { inp.focus(); inp.select(); }
+}
+function closeDlg() { dlgEl.classList.remove('show'); }
+function applyDlgDefaults() {
+  if (!dlg.nameDirty) dlg.name = dlgDefaultName();
+  if (!dlg.sizeDirty) [dlg.w, dlg.d, dlg.h] = dlgDefaults();
+  if (dlg.shape === 'circle') dlg.d = dlg.w;
+}
+function dlgPreview() {
+  const w = Math.max(1, Number(dlg.w) || 1), d = dlg.shape === 'circle' ? w : Math.max(1, Number(dlg.d) || 1);
+  const k = Math.min(150 / w, 66 / d), pw = w * k, ph = d * k;
+  const at = `x="${100 - pw / 2}" y="${40 - ph / 2}" width="${pw}" height="${ph}"`;
+  const body = dlg.shape === 'rect'
+    ? `<rect ${at} rx="2" fill="#cfe0f3" stroke="#4a4f57" stroke-width="1.5"/>`
+    : `<ellipse cx="100" cy="40" rx="${pw / 2}" ry="${ph / 2}" fill="#cfe0f3" stroke="#4a4f57" stroke-width="1.5"/>`;
+  const cap = dlg.shape === 'circle' ? `直径 ${fmt(w)} cm` : `横 ${fmt(w)} × 縦 ${fmt(d)} cm`;
+  return `<svg viewBox="0 0 200 100" width="200" height="100" role="img" aria-label="形のプレビュー">${body}<text x="100" y="94" text-anchor="middle" font-size="13" fill="#222">${cap}</text></svg>`;
+}
+function renderDlg() {
+  const r = room(), item = dlg.type === 'item', circle = dlg.shape === 'circle';
+  const inp = (label, key, val) => `<label class="fld"><span>${label}</span><input type="number" inputmode="decimal" step="any" data-dk="${key}" value="${esc(val)}" autocomplete="off"></label>`;
+  dlgCard.innerHTML = `<div class="stack">
+    <h3 style="margin:0">${item ? '小物' : '家具'}を追加</h3>
+    <div class="seg" role="group" aria-label="種類">
+      <button data-dt="furn" class="${item ? '' : 'on'}">家具</button>
+      <button data-dt="item" class="${item ? 'on' : ''}" ${r.furniture.length ? '' : 'disabled'}>小物(家具の上に置く)</button>
+    </div>
+    <div class="seg" role="group" aria-label="形">${SHAPES.map((k) => `<button data-ds="${k}" class="${dlg.shape === k ? 'on' : ''}">${SHAPE_LABEL[k]}</button>`).join('')}</div>
+    <div class="preview" id="dlgPrev">${dlgPreview()}</div>
+    <label class="fld"><span>名前</span><input type="text" id="dlgName" data-dk="name" value="${esc(dlg.name)}" autocomplete="off"></label>
+    <div class="grid2">
+      ${circle ? inp('直径 (cm)', 'w', dlg.w) : inp('横・幅 (cm)', 'w', dlg.w) + inp('縦・奥行き (cm)', 'd', dlg.d)}
+      ${inp('高さ (cm)', 'h', dlg.h)}
+    </div>
+    ${circle ? '' : '<p class="note" style="margin:0">楕円は横と縦の長さを変えて作ります(同じ値なら円)。</p>'}
+    ${item ? `<label class="fld"><span>載せる家具</span><select data-dk="on">${r.furniture.map((f) => `<option value="${esc(f.id)}" ${f.id === dlg.on ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></label>` : ''}
+    <div class="grid2"><button class="btn" data-act="dlgCancel">キャンセル</button><button class="btn primary" data-act="dlgOk">追加</button></div>
+  </div>`;
+}
+dlgCard.addEventListener('input', (e) => {
+  const k = e.target.dataset && e.target.dataset.dk;
+  if (!k) return;
+  if (k === 'name') { dlg.name = e.target.value; dlg.nameDirty = true; return; }
+  if (k === 'on') { dlg.on = e.target.value; return; }
+  dlg[k] = e.target.value;
+  dlg.sizeDirty = true;
+  if (dlg.shape === 'circle' && k === 'w') dlg.d = dlg.w;
+  $('#dlgPrev').innerHTML = dlgPreview();
+});
+dlgCard.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-dt],[data-ds]');
+  if (!t || t.disabled) return;
+  if (t.dataset.dt) dlg.type = t.dataset.dt;
+  if (t.dataset.ds) dlg.shape = t.dataset.ds;
+  applyDlgDefaults();
+  renderDlg();
+});
+dlgEl.addEventListener('click', (e) => { if (e.target === dlgEl) closeDlg(); });
+
+function createFromDlg() {
+  if (state.mode !== 'edit') return;
+  const r = room(), circle = dlg.shape === 'circle', item = dlg.type === 'item';
+  const dflt = dlgDefaults();
+  const w = round1(num(dlg.w, dflt[0], ...LIM.w)), d = circle ? w : round1(num(dlg.d, dflt[1], ...LIM.d)), h = round1(num(dlg.h, dflt[2], ...LIM.h));
+  const name = dlg.name.trim() || dlgDefaultName();
+  closeDlg();
+  let o;
+  if (item) {
+    const base = r.furniture.find((f) => f.id === dlg.on);
+    if (!base) return;
+    const N = fRect(base);
+    o = { id: nextId(r.items, 'i'), name, on: base.id, x: round1((N.w - w) / 2), y: round1((N.d - d) / 2), w, d, h, rot: 0, color: ITEM_COLORS[r.items.length % ITEM_COLORS.length], shape: dlg.shape };
+    r.items.push(o);
+  } else {
+    const p = freeSpot(w, d);
+    o = { id: nextId(r.furniture, 'k'), name, x: p.x, y: p.y, w, d, h, rot: 0, front: 0, color: FURN_COLORS[r.furniture.length % FURN_COLORS.length], shape: dlg.shape };
+    r.furniture.push(o);
+  }
+  changed({ panel: 'none' });
+  select(o.id);
+}
+
 function rotateSel() {
-  const f = selFurn();
-  if (!f || state.mode !== 'edit') return;
-  const R = fRect(f), cx = R.x0 + R.w / 2, cy = R.y0 + R.d / 2;
+  const o = selObj();
+  if (!o || state.mode !== 'edit') return;
+  const r = room();
+  if (isItem(o)) {   // 小物はその場で回す
+    const R = iRect(o, r), cx = R.x0 + R.w / 2, cy = R.y0 + R.d / 2;
+    o.rot = (o.rot + 90) % 360;
+    const N = iRect(o, r);
+    o.x = round1(o.x + cx - (N.x0 + N.w / 2)); o.y = round1(o.y + cy - (N.y0 + N.d / 2));
+    changed({ panel: 'full' });
+    return;
+  }
+  const f = o, R = fRect(f), cx = R.x0 + R.w / 2, cy = R.y0 + R.d / 2;
+  // 載っている小物も一緒に回す(家具の中心まわりに時計回りに90度)
+  const kids = itemsOn(f.id).map((it) => { const k = iRect(it, r); return { it, dx: k.x0 + k.w / 2 - cx, dy: k.y0 + k.d / 2 - cy }; });
   f.rot = (f.rot + 90) % 360;
-  const N = fRect(f), r = room();
+  const N = fRect(f);
   f.x = Math.round(cx - N.w / 2); f.y = Math.round(cy - N.d / 2);
   if (N.w <= r.width) f.x = clamp(f.x, 0, r.width - N.w);
   if (N.d <= r.depth) f.y = clamp(f.y, 0, r.depth - N.d);
+  const mx = f.x + N.w / 2, my = f.y + N.d / 2;
+  for (const { it, dx, dy } of kids) {
+    it.rot = (it.rot + 90) % 360;
+    const K = iRect(it, r);
+    it.x = round1(mx - dy - K.w / 2 - f.x); it.y = round1(my + dx - K.d / 2 - f.y);
+  }
   changed({ panel: 'full' });
 }
 function duplicateSel() {
-  const f = selFurn(), r = room();
-  if (!f || state.mode !== 'edit') return;
-  const c = { ...f, id: nextId(r.furniture, 'k'), name: f.name + '(コピー)', x: f.x + 20, y: f.y + 20 };
+  const o = selObj(), r = room();
+  if (!o || state.mode !== 'edit') return;
+  if (isItem(o)) {
+    const c = { ...o, id: nextId(r.items, 'i'), name: o.name + '(コピー)', x: o.x + 10, y: o.y + 10 };
+    r.items.push(c);
+    changed({ panel: 'none' });
+    select(c.id);
+    return;
+  }
+  const c = { ...o, id: nextId(r.furniture, 'k'), name: o.name + '(コピー)', x: o.x + 20, y: o.y + 20 };
   r.furniture.push(c);
+  for (const it of itemsOn(o.id)) r.items.push({ ...it, id: nextId(r.items, 'i'), on: c.id });
   changed({ panel: 'none' });
   select(c.id);
 }
 function deleteSel() {
-  const f = selFurn(), r = room();
-  if (!f || state.mode !== 'edit') return;
-  if (!confirm(`「${f.name}」を削除しますか?`)) return;
-  r.furniture = r.furniture.filter((o) => o.id !== f.id);
+  const o = selObj(), r = room();
+  if (!o || state.mode !== 'edit') return;
+  const kids = isItem(o) ? [] : itemsOn(o.id);
+  if (!confirm(kids.length ? `「${o.name}」と、載っている小物 ${kids.length} 個を削除しますか?` : `「${o.name}」を削除しますか?`)) return;
+  if (isItem(o)) r.items = r.items.filter((i) => i.id !== o.id);
+  else {
+    r.furniture = r.furniture.filter((f) => f.id !== o.id);
+    r.items = r.items.filter((i) => i.on !== o.id);
+  }
   state.selId = null;
   if (state.tab === 'furn') state.sheet = false;
   changed({ panel: 'full' });
   syncSize();
 }
 function nudge(dx, dy) {
-  const f = selFurn();
-  if (!f || state.mode !== 'edit') return;
-  f.x = Math.round((f.x + dx) * 100) / 100; f.y = Math.round((f.y + dy) * 100) / 100;
+  const o = selObj();
+  if (!o || state.mode !== 'edit') return;
+  o.x = Math.round((o.x + dx) * 100) / 100; o.y = Math.round((o.y + dy) * 100) / 100;
   changed({ panel: 'sync' });
 }
 
@@ -929,37 +1338,60 @@ function renderPanel() {
   if (state.tab === 'file') updateShareInfo();
 }
 
-function furnTab() {
-  const r = room(), f = selFurn(), ro = state.mode !== 'edit';
-  if (!f) {
-    return `<div class="stack">
-      ${ro ? '' : '<button class="btn primary" data-act="addFurn" style="width:100%">＋ 家具を追加</button>'}
-      <div class="list">${r.furniture.length ? r.furniture.map((o) => {
-        const lv = state.levels[o.id];
-        return `<button class="item" data-act="selectFurn" data-id="${esc(o.id)}"><span class="chip" style="background:${o.color}"></span><span style="flex:1;min-width:0">${esc(o.name)} <span class="note">${fmt(o.w)}×${fmt(o.d)}</span></span>${lv ? `<span class="ico ${lv === 'red' ? 'red' : 'yel'}">!</span>` : ''}</button>`;
-      }).join('') : '<p class="note">家具がありません。「＋ 家具を追加」から置いてみましょう。</p>'}</div>
-      <p class="note">家具をタップすると選択できます。${ro ? '閲覧モードでは動かせません。' : 'ドラッグで移動できます。'}</p></div>`;
-  }
-  const mine = state.warns.filter((w) => w.ids.includes(f.id));
-  const warnBox = mine.length ? `<div class="warnbox">${mine.map((w) => `${w.level === 'red' ? '✕' : '▲'} ${esc(w.text)}`).join('<br>')}</div>` : '';
-  if (ro) {
-    return `<div class="stack"><h3><span class="chip" style="display:inline-block;background:${f.color};vertical-align:middle"></span> ${esc(f.name)}</h3>
-      <p>幅 ${fmt(f.w)} × 奥行き ${fmt(f.d)} × 高さ ${fmt(f.h)} cm<br>前方スペース ${fmt(f.front)} cm / 向き ${f.rot}°<br>位置 X ${fmt(f.x)}, Y ${fmt(f.y)}</p>
-      ${warnBox}<button class="btn" data-act="deselect" style="width:100%">一覧に戻る</button></div>`;
-  }
-  const pad = (n) => `<div class="pad">
+/** 寸法の短い表記: 円は φ直径、それ以外は 横×縦 */
+const dimStr = (o) => (o.shape === 'circle' ? `φ${fmt(o.w)}` : `${fmt(o.w)}×${fmt(o.d)}`);
+const chipOf = (o) => `<span class="chip${isRound(o) ? ' round' : ''}" style="background:${o.color}"></span>`;
+const padHtml = (n) => `<div class="pad">
       <span></span><button class="btn" data-act="nudge" data-dx="0" data-dy="${-n}" aria-label="上へ${n}cm">↑${n}</button><span></span>
       <button class="btn" data-act="nudge" data-dx="${-n}" data-dy="0" aria-label="左へ${n}cm">←${n}</button><span></span><button class="btn" data-act="nudge" data-dx="${n}" data-dy="0" aria-label="右へ${n}cm">→${n}</button>
       <span></span><button class="btn" data-act="nudge" data-dx="0" data-dy="${n}" aria-label="下へ${n}cm">↓${n}</button><span></span></div>`;
+const padsHtml = () => `<div class="pads">
+      <div class="padwrap"><small>1cm 移動</small>${padHtml(1)}</div>
+      <div class="padwrap"><small>10cm 移動</small>${padHtml(10)}</div>
+    </div>`;
+const warnBoxOf = (id) => {
+  const mine = state.warns.filter((w) => w.ids.includes(id));
+  return mine.length ? `<div class="warnbox">${mine.map((w) => `${w.level === 'red' ? '✕' : '▲'} ${esc(w.text)}`).join('<br>')}</div>` : '';
+};
+/** 形に応じた寸法欄。円は直径だけ、四角形・楕円は横と縦(どちらも cm) */
+function sizeFlds(col, o) {
+  return o.shape === 'circle'
+    ? fld('直径 (cm)', col, o.id, 'w', o.w) + fld('高さ (cm)', col, o.id, 'h', o.h)
+    : fld('横・幅 (cm)', col, o.id, 'w', o.w) + fld('縦・奥行き (cm)', col, o.id, 'd', o.d) + fld('高さ (cm)', col, o.id, 'h', o.h);
+}
+
+function furnTab() {
+  const r = room(), ro = state.mode !== 'edit';
+  const it = selItem();
+  if (it) return itemTab(it);
+  const f = selFurn();
+  if (!f) {
+    const row = (o, sub) => {
+      const lv = state.levels[o.id];
+      return `<button class="item" data-act="selectFurn" data-id="${esc(o.id)}" style="${sub ? 'margin-left:20px;width:calc(100% - 20px)' : ''}">${chipOf(o)}<span style="flex:1;min-width:0">${esc(o.name)} <span class="note">${dimStr(o)}${sub ? ' 小物' : ''}</span></span>${lv ? `<span class="ico ${lv === 'red' ? 'red' : 'yel'}">!</span>` : ''}</button>`;
+    };
+    return `<div class="stack">
+      ${ro ? '' : `<div class="grid3 addrow">
+        <button class="btn primary" data-act="addDlg" data-type="furn" data-shape="rect">＋ 四角い家具</button>
+        <button class="btn primary" data-act="addDlg" data-type="furn" data-shape="circle">＋ 円・楕円</button>
+        <button class="btn" data-act="addDlg" data-type="item" data-shape="rect" ${r.furniture.length ? '' : 'disabled'}>＋ 小物</button>
+      </div>`}
+      <div class="list">${r.furniture.length ? r.furniture.map((o) => row(o, false) + itemsOn(o.id).map((i) => row(i, true)).join('')).join('') : '<p class="note">家具がありません。「＋ 四角い家具」「＋ 円・楕円」から置いてみましょう。</p>'}</div>
+      <p class="note">家具・小物をタップすると選択できます。${ro ? '閲覧モードでは動かせません。' : 'ドラッグで移動できます。小物は家具の上に重ねて置けます。'}</p></div>`;
+  }
+  const warnBox = warnBoxOf(f.id), kids = itemsOn(f.id);
+  if (ro) {
+    return `<div class="stack"><h3>${chipOf(f)} ${esc(f.name)}</h3>
+      <p>${SHAPE_LABEL[f.shape]}${f.shape === 'circle' ? ` 直径 ${fmt(f.w)}` : ` 横 ${fmt(f.w)} × 縦 ${fmt(f.d)}`} × 高さ ${fmt(f.h)} cm<br>前方スペース ${fmt(f.front)} cm / 向き ${f.rot}°<br>位置 X ${fmt(f.x)}, Y ${fmt(f.y)}${kids.length ? `<br>載っている小物: ${kids.map((i) => esc(i.name)).join('、')}` : ''}</p>
+      ${warnBox}<button class="btn" data-act="deselect" style="width:100%">一覧に戻る</button></div>`;
+  }
   return `<div class="stack">
     ${fld('名前', 'furniture', f.id, 'name', f.name, { type: 'text' })}
+    ${sel('形', 'furniture', f.id, 'shape', f.shape, SHAPE_OPTS)}
     <div class="grid2">
       ${fld('X (cm)', 'furniture', f.id, 'x', f.x)}${fld('Y (cm)', 'furniture', f.id, 'y', f.y)}
     </div>
-    <div class="pads">
-      <div class="padwrap"><small>1cm 移動</small>${pad(1)}</div>
-      <div class="padwrap"><small>10cm 移動</small>${pad(10)}</div>
-    </div>
+    ${padsHtml()}
     <div class="grid3">
       <button class="btn" data-act="rot">↻ 回転</button>
       <button class="btn" data-act="dup">複製</button>
@@ -967,14 +1399,52 @@ function furnTab() {
     </div>
     ${warnBox}
     <div class="grid2">
-      ${fld('幅 (cm)', 'furniture', f.id, 'w', f.w)}${fld('奥行き (cm)', 'furniture', f.id, 'd', f.d)}
-      ${fld('高さ (cm)', 'furniture', f.id, 'h', f.h)}${fld('前方スペース (cm)', 'furniture', f.id, 'front', f.front)}
+      ${sizeFlds('furniture', f)}${fld('前方スペース (cm)', 'furniture', f.id, 'front', f.front)}
     </div>
     <div class="grid2">
       ${fld('色', 'furniture', f.id, 'color', f.color, { type: 'color' })}
       <div class="fld"><span>向き</span><div style="height:44px;display:flex;align-items:center">${f.rot}°(前方は${['下', '左', '上', '右'][f.rot / 90]}向き)</div></div>
     </div>
+    <h3>載っている小物(${kids.length})</h3>
+    <div class="list">${kids.map((i) => `<button class="item" data-act="selectFurn" data-id="${esc(i.id)}">${chipOf(i)}<span style="flex:1;min-width:0">${esc(i.name)} <span class="note">${dimStr(i)}</span></span></button>`).join('')}</div>
+    <button class="btn" data-act="addDlg" data-type="item" data-shape="rect" data-on="${esc(f.id)}" style="width:100%">＋ この家具に小物を置く</button>
     <button class="btn" data-act="deselect" style="width:100%">選択を解除</button>
+  </div>`;
+}
+
+function itemTab(it) {
+  const r = room(), ro = state.mode !== 'edit', base = r.furniture.find((f) => f.id === it.on);
+  const warnBox = warnBoxOf(it.id), top = base ? base.h + it.h : it.h;
+  if (ro) {
+    return `<div class="stack"><h3>${chipOf(it)} ${esc(it.name)}</h3>
+      <p>小物(${base ? esc(base.name) : ''}の上)<br>${SHAPE_LABEL[it.shape]}${it.shape === 'circle' ? ` 直径 ${fmt(it.w)}` : ` 横 ${fmt(it.w)} × 縦 ${fmt(it.d)}`} × 高さ ${fmt(it.h)} cm(床から ${fmt(top)} cm)</p>
+      ${warnBox}<button class="btn" data-act="deselect" style="width:100%">一覧に戻る</button></div>`;
+  }
+  return `<div class="stack">
+    <p class="note" style="margin:0">小物 ／ ${base ? esc(base.name) : ''} の上に置いています</p>
+    ${fld('名前', 'items', it.id, 'name', it.name, { type: 'text' })}
+    ${sel('載せる家具', 'items', it.id, 'on', it.on, r.furniture.map((f) => [f.id, esc(f.name)]))}
+    ${sel('形', 'items', it.id, 'shape', it.shape, SHAPE_OPTS)}
+    <div class="grid2">
+      ${fld('X (cm)', 'items', it.id, 'x', it.x)}${fld('Y (cm)', 'items', it.id, 'y', it.y)}
+    </div>
+    <p class="note" style="margin:0">X・Yは載せる家具の左上からの位置です。家具を動かすと小物も一緒に動きます。</p>
+    ${padsHtml()}
+    <div class="grid3">
+      <button class="btn" data-act="rot">↻ 回転</button>
+      <button class="btn" data-act="dup">複製</button>
+      <button class="btn danger" data-act="del">削除</button>
+    </div>
+    ${warnBox}
+    <div class="grid2">${sizeFlds('items', it)}</div>
+    <div class="grid2">
+      ${fld('色', 'items', it.id, 'color', it.color, { type: 'color' })}
+      <div class="fld"><span>床からの高さ</span><div style="height:44px;display:flex;align-items:center">${fmt(top)} cm</div></div>
+    </div>
+    <div class="grid2">
+      <button class="btn" data-act="selectFurn" data-id="${esc(it.on)}">家具を選択</button>
+      <button class="btn" data-act="deselect">選択を解除</button>
+    </div>
   </div>`;
 }
 
@@ -1034,6 +1504,10 @@ function fileTab() {
     <div id="shareInfo" class="note">URLの長さを計算中…</div>
     <input id="shareUrl" class="urlbox" readonly aria-label="共有リンク" hidden>
 
+    <h3>印刷</h3>
+    <button class="btn" data-act="print" style="width:100%">🖨 配置図と一覧を印刷</button>
+    <p class="note">配置図のあとに、家具・小物の一覧とチェック結果が付きます。${state.hideText ? '文字の非表示モード中は、配置図の文字を省きます。' : ''}${state.hideWarn ? '警告を隠している間は、配置図の警告表示も省きます(チェック結果の一覧は印刷されます)。' : ''}</p>
+
     <h3>ファイル</h3>
     <div class="grid2">
       <button class="btn" data-act="exportJson">JSONを書き出す</button>
@@ -1067,11 +1541,18 @@ function applyField(t, commit) {
     if (!Number.isFinite(v)) { if (commit) t.value = obj[key]; return; }
     const [a, b] = LIM[col + '.' + key] || LIM[key] || [-1e6, 1e6];
     obj[key] = clamp(v, a, b);
+  } else if (col === 'items' && key === 'on') {
+    moveItemTo(obj, t.value);
   } else {
     obj[key] = t.value;
     if (key === 'name' && !t.value.trim()) obj[key] = '';
   }
   let rerender = false;
+  if ((col === 'furniture' || col === 'items') && (key === 'shape' || (key === 'w' && obj.shape === 'circle'))) {
+    if (obj.shape === 'circle') obj.d = obj.w;   // 円は縦=横
+    if (key === 'shape') rerender = true;         // 形が変わると入力欄の構成も変わる
+  }
+  if (col === 'items' && key === 'on') rerender = true;
   if ((col === 'doors' || col === 'windows') && (commit || t.tagName === 'SELECT') && ['offset', 'width', 'wall'].includes(key)) {
     const len = wallLen(room(), obj.wall);
     obj.width = Math.min(obj.width, len);
@@ -1091,9 +1572,9 @@ panelBody.addEventListener('input', (e) => { if (e.target.dataset && e.target.da
 panelBody.addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.col) applyField(e.target, true); });
 
 function syncInputs() {
-  const f = selFurn();
+  const f = selObj();
   if (!f || state.tab !== 'furn') return;
-  panelBody.querySelectorAll('[data-col="furniture"]').forEach((inp) => {
+  panelBody.querySelectorAll('[data-col="furniture"],[data-col="items"]').forEach((inp) => {
     if (inp === document.activeElement || inp.dataset.id !== f.id) return;
     const v = String(f[inp.dataset.key]);
     if (inp.value !== v) inp.value = v;
@@ -1108,7 +1589,7 @@ function changed(o = {}) {
   updateChrome();
   requestRender();
   if (o.panel === 'full') renderPanel();
-  else if (state.tab === 'warn' || (state.tab === 'furn' && !selFurn())) renderPanel();
+  else if (state.tab === 'warn' || (state.tab === 'furn' && !selObj())) renderPanel();
   else syncInputs();
   scheduleSave();
   if (state.tab === 'file') scheduleShareInfo();
@@ -1131,6 +1612,14 @@ function updateChrome() {
   notice.classList.toggle('show', state.locked);
   notice.querySelector('span').textContent = '共有リンクの内容を閲覧中です。このブラウザの保存データはまだ変更されていません。';
   $('#btnRuler').setAttribute('aria-pressed', String(state.ruler));
+  const bt = $('#btnText');
+  bt.setAttribute('aria-pressed', String(state.hideText));
+  bt.setAttribute('aria-label', state.hideText ? '文字を表示する' : '文字を隠す');
+  bt.title = state.hideText ? '文字を表示する' : '文字を隠す(一覧表示用)';
+  const bw = $('#btnWarn');
+  bw.setAttribute('aria-pressed', String(state.hideWarn));
+  bw.setAttribute('aria-label', state.hideWarn ? '警告を表示する' : '警告を隠す');
+  bw.title = state.hideWarn ? '警告を表示する' : '警告を隠す(配置図の斜線・マーク)';
   $('#rulerHint').hidden = !(state.ruler && !state.selId);
   const wt = tabsEl.querySelector('[data-tab="warn"]');
   if (wt) wt.textContent = '警告' + (n ? `(${n})` : '');
@@ -1274,6 +1763,74 @@ function replaceData(data) {
   scheduleSave();
 }
 
+/* =====================================================================
+ * 表示設定(文字の非表示)・印刷
+ * ===================================================================== */
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+    state.hideText = !!p.hideText; state.hideWarn = !!p.hideWarn;
+  } catch (_) { /* 既定値のまま */ }
+}
+function savePrefs() {
+  try { localStorage.setItem(PREF_KEY, JSON.stringify({ hideText: state.hideText, hideWarn: state.hideWarn })); } catch (_) { /* noop */ }
+}
+function setHideText(v) {
+  state.hideText = v;
+  savePrefs();
+  updateChrome();
+  if (state.tab === 'file') renderPanel();
+  requestRender();
+  toast(v ? '文字を非表示にしました(選択中の名前だけ表示します)' : '文字を表示しました');
+}
+function setHideWarn(v) {
+  state.hideWarn = v;
+  savePrefs();
+  updateChrome();
+  if (state.tab === 'file') renderPanel();
+  requestRender();
+  toast(v ? '配置図の警告表示を隠しました(件数と一覧は残ります)' : '警告を表示しました');
+}
+
+/** 印刷用の配置図。画面の拡大縮小とは無関係に、部屋全体が収まる大きさで描き直す */
+function printSvg(landscape) {
+  const r = room(), W = r.width, D = r.depth;
+  const vwMax = landscape ? 1000 : 700, vhMax = landscape ? 520 : 720;
+  const s = clamp(Math.min((vwMax - 56 - 16) / (W + 2 * WALL_T), (vhMax - 22 - 12) / (D + 2 * WALL_T)), 0.05, 20);
+  const tx = 56 + WALL_T * s, ty = 22 + WALL_T * s;
+  const vw = tx + (W + WALL_T) * s + 16, vh = ty + (D + WALL_T) * s + 12;
+  const keep = { ...view };
+  Object.assign(view, { s, tx, ty, w: vw, h: vh });   // T() などが view.s を参照するため一時的に差し替える
+  try {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vw} ${vh}" role="img" aria-label="部屋の配置図">${planMarkup({ print: true, idp: 'p_' })}</svg>`;
+  } finally { Object.assign(view, keep); }
+}
+function buildPrint() {
+  const r = room(), landscape = r.width > r.depth * 1.15, d = new Date();
+  $('#pageStyle').textContent = `@page{size:A4 ${landscape ? 'landscape' : 'portrait'};margin:10mm}`;
+  const sizeOf = (o) => (o.shape === 'circle' ? `直径 ${fmt(o.w)}` : `${fmt(o.w)} × ${fmt(o.d)}`);
+  const furnRows = r.furniture.map((f) => `<tr><td>${esc(f.name)}</td><td>${SHAPE_LABEL[f.shape]}</td><td>${sizeOf(f)}</td><td>${fmt(f.h)}</td><td>${f.front > 0 ? fmt(f.front) : '-'}</td><td>${fmt(f.x)}, ${fmt(f.y)}</td></tr>`).join('');
+  const itemRows = r.items.map((i) => {
+    const b = r.furniture.find((f) => f.id === i.on);
+    return `<tr><td>${esc(i.name)}</td><td>${b ? esc(b.name) : ''}</td><td>${SHAPE_LABEL[i.shape]}</td><td>${sizeOf(i)}</td><td>${fmt(i.h)}</td></tr>`;
+  }).join('');
+  const warns = state.warns.map((w) => `<li>${w.level === 'red' ? '✕ ' : '▲ '}${esc(w.text)}</li>`).join('');
+  $('#printArea').innerHTML = `
+    <h1>${esc(r.name)}</h1>
+    <p class="meta">部屋 ${fmt(r.width)} × ${fmt(r.depth)} cm ／ ${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 印刷 ／ 判定: 赤 ${state.warns.filter((w) => w.level === 'red').length} 件・黄 ${state.warns.filter((w) => w.level !== 'red').length} 件</p>
+    <div class="pplan">${printSvg(landscape).replace('<svg ', `<svg style="max-height:${landscape ? 125 : 165}mm" `)}</div>
+    <h2>家具(単位 cm)</h2>
+    ${furnRows ? `<table><thead><tr><th>名前</th><th>形</th><th>横 × 縦</th><th>高さ</th><th>前方</th><th>位置 X, Y</th></tr></thead><tbody>${furnRows}</tbody></table>` : '<p>なし</p>'}
+    ${itemRows ? `<h2>小物(単位 cm)</h2><table><thead><tr><th>名前</th><th>載せる家具</th><th>形</th><th>横 × 縦</th><th>高さ</th></tr></thead><tbody>${itemRows}</tbody></table>` : ''}
+    <h2>チェック結果</h2>
+    ${warns ? `<ul>${warns}</ul>` : '<p>問題は見つかりませんでした。</p>'}`;
+}
+function printNow() {
+  buildPrint();
+  window.print();
+}
+window.addEventListener('beforeprint', buildPrint);   // ブラウザのメニューや Ctrl+P から印刷した場合にも最新の内容にする
+
 let toastTimer = null;
 function toast(msg) {
   const t = $('#toast');
@@ -1295,7 +1852,7 @@ document.addEventListener('click', (e) => {
     case 'openRoom': openTab('room'); break;
     case 'openWarn': openTab('warn'); break;
     case 'openMenu':
-      if (state.sheet && matchMedia('(max-width:767px)').matches) { state.sheet = false; renderPanel(); syncSize(); } else openTab(state.tab === 'furn' && !selFurn() ? 'room' : state.tab);
+      if (state.sheet && matchMedia('(max-width:767px)').matches) { state.sheet = false; renderPanel(); syncSize(); } else openTab(state.tab === 'furn' && !selObj() ? 'room' : state.tab);
       break;
     case 'openShare': openTab('file'); break;
     case 'closeSheet': state.sheet = false; if (state.tab === 'furn') state.selId = null; updateChrome(); renderPanel(); syncSize(); requestRender(); break;
@@ -1305,7 +1862,12 @@ document.addEventListener('click', (e) => {
     case 'fit': fitView(); break;
     case 'zoomIn': zoomAt(view.w / 2, view.h / 2, 1.3); break;
     case 'zoomOut': zoomAt(view.w / 2, view.h / 2, 1 / 1.3); break;
-    case 'addFurn': addFurniture(); break;
+    case 'addDlg': openDlg(d.type, d.shape, d.on); break;
+    case 'dlgOk': createFromDlg(); break;
+    case 'dlgCancel': closeDlg(); break;
+    case 'toggleText': setHideText(!state.hideText); break;
+    case 'toggleWarn': setHideWarn(!state.hideWarn); break;
+    case 'print': printNow(); break;
     case 'selectFurn': select(d.id); break;
     case 'deselect': deselect(); break;
     case 'rot': rotateSel(); break;
@@ -1339,9 +1901,14 @@ $('#fileIn').addEventListener('change', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+  if (dlgEl.classList.contains('show')) {
+    if (e.key === 'Escape') closeDlg();
+    else if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); createFromDlg(); }
+    return;
+  }
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
-  const f = selFurn();
+  const f = selObj();
   if (!f || state.mode !== 'edit') return;
   const n = e.shiftKey ? 10 : 1;
   switch (e.key) {
@@ -1378,6 +1945,7 @@ async function loadFromHash() {
 }
 
 async function boot() {
+  loadPrefs();
   state.data = loadLocal() || sampleData();
   recompute();
   updateChrome();
@@ -1386,7 +1954,7 @@ async function boot() {
   view.w = w; view.h = h;
   fitView();
   if (location.hash.length > 1) await loadFromHash();
-  window.__app = { state, view, room, computeWarnings, fitView };   // 動作確認用
+  window.__app = { state, view, room, computeWarnings, fitView, normalize };   // 動作確認用
 }
 boot();
 })();
